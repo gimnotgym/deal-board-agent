@@ -1,0 +1,22 @@
+# 환경변수 (API 키 포함 — 절대 커밋 금지)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# 로그
+*.log
+server.log
+server_log.txt
+
+# 스크린샷 (용량)
+screenshot_*.png
+
+# 기타
+.vscode/
+.claude/
+*.bat

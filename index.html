@@ -1,0 +1,3318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Board Agent — SK그룹 AX</title>
+<style>
+:root {
+  --bg: #F8F8F7;
+  --card: #FFFFFF;
+  --accent: #6B4FBB;
+  --blue: #6B4FBB;
+  --blue-light: #F0ECF9;
+  --blue-mid: #E8E0F5;
+  --navy: #1B2A4A;
+  --text: #111111;
+  --text2: #888888;
+  --text3: #BBBBBB;
+  --border: #EBEBEB;
+  --sf: #3B82F6;
+  --dq: #6B4FBB;
+  --wp: #10B981;
+  --warn: #F59E0B;
+  --danger: #EF4444;
+  --success: #10B981;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+button{cursor:pointer;border:none;background:none;font-family:inherit}
+input,textarea,select{font-family:inherit}
+
+/* ── Header ── */
+#header{background:#fff;color:var(--text);display:flex;align-items:center;gap:0;padding:0 40px;height:56px;position:sticky;top:0;z-index:100;border-bottom:1px solid #F0F0EE}
+.logo{font-weight:700;font-size:16px;letter-spacing:-0.3px;white-space:nowrap;margin-right:32px}
+.logo span{color:var(--accent)}
+.role-tabs{display:flex;gap:0;flex:1;height:56px}
+.role-tab{padding:0 20px;height:56px;font-size:13px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.role-tab:hover{color:var(--text)}
+.role-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.user-badge{background:#F5F5F3;border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2)}
+.user-badge strong{color:var(--text)}
+
+/* ── Views ── */
+.view{display:none}
+.view.active{display:block}
+
+/* ── KPI Cards ── */
+.kpi-grid{display:grid;gap:24px}
+.kpi-grid-4{grid-template-columns:repeat(4,1fr)}
+.kpi-card{background:var(--card);border-radius:12px;padding:28px}
+.kpi-label{font-size:13px;color:var(--text2);font-weight:400;margin-bottom:8px}
+.kpi-value{font-size:36px;font-weight:600;color:var(--text);letter-spacing:-1px;line-height:1}
+.kpi-value.danger{color:var(--danger)}
+.kpi-sub{font-size:12px;color:var(--text3);margin-top:6px}
+
+/* ── Cards ── */
+.card{background:var(--card);border-radius:12px}
+.card-head{padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-weight:600;font-size:15px;color:var(--text)}
+.card-body{padding:20px 24px}
+
+/* ── Sticky Notes ── */
+.notes-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.note{background:#FEFCE8;border-radius:10px;padding:14px 16px;min-width:200px;max-width:240px;flex-shrink:0}
+.note.danger{background:#FFF0F0}
+.note-title{font-size:11px;font-weight:600;color:#92400E;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.note.danger .note-title{color:#991B1B}
+.note-deal{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.3}
+.note-desc{font-size:11px;color:var(--text2)}
+
+/* ── Score Bar ── */
+.score-bar-wrap{display:flex;align-items:center;gap:8px}
+.score-bar{height:4px;border-radius:4px;background:#F0F0EE;display:flex;overflow:hidden;flex:1}
+.bar-sf{background:var(--sf);transition:width .6s ease}
+.bar-dq{background:var(--dq);transition:width .6s ease}
+.bar-wp{background:var(--wp);transition:width .6s ease}
+/* 리스트(다수 행)용 — transition 제거로 대량 렌더 시 즉시 표시 */
+.score-bar.static .bar-sf,.score-bar.static .bar-dq,.score-bar.static .bar-wp{transition:none}
+.score-num{font-size:13px;font-weight:700;color:var(--text);min-width:32px;text-align:right}
+
+/* ── Deal List ── */
+.deal-table{width:100%;border-collapse:collapse}
+.deal-table th{text-align:left;font-size:11px;font-weight:600;color:var(--text2);padding:10px 16px;letter-spacing:0.5px;text-transform:uppercase}
+.deal-table td{padding:0 16px;height:52px;vertical-align:middle}
+.deal-row{cursor:pointer;transition:background .12s}
+.deal-row:hover{background:#FAFAF9}
+.deal-row.selected{background:var(--blue-light)}
+.deal-name{font-weight:600;font-size:13px;color:var(--text)}
+.deal-client{font-size:12px;color:var(--text2)}
+
+/* ── Page 2 Layout ── */
+#rep-p2{display:none}
+.p2-layout{display:flex;height:calc(100vh - 112px);overflow:hidden;gap:16px;padding:0 40px 40px;background:var(--bg)}
+.p2-left{width:380px;min-width:320px;overflow-y:auto;background:var(--card);border-radius:12px}
+.p2-right{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border-radius:12px}
+
+/* ── Score Panel ── */
+.score-panel{padding:24px}
+.score-total-row{display:flex;align-items:flex-end;gap:12px;margin-bottom:16px}
+.score-total{font-size:48px;font-weight:700;letter-spacing:-2px;color:var(--text);transition:all .6s ease;line-height:1}
+.score-total-label{font-size:12px;color:var(--text2);margin-bottom:6px}
+.score-axis-bar{height:8px;border-radius:4px;background:#F5F5F3;display:flex;overflow:hidden;margin-bottom:10px}
+.axis-sf{background:var(--sf);transition:width .6s ease;display:flex;align-items:center;justify-content:center}
+.axis-dq{background:var(--dq);transition:width .6s ease;display:flex;align-items:center;justify-content:center}
+.axis-wp{background:var(--wp);transition:width .6s ease;display:flex;align-items:center;justify-content:center}
+.axis-label{font-size:9px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;padding:0 3px}
+.score-legend{display:flex;gap:12px;font-size:11px;color:var(--text2)}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+
+.meddpicc-section{padding:0 24px 16px}
+.section-title{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:0.5px;margin-bottom:10px;text-transform:uppercase}
+.meddpicc-grid{display:flex;flex-direction:column;gap:4px}
+.meddpicc-row-full{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px}
+.meddpicc-row-full:hover{background:#FAFAF9}
+.meddpicc-key{font-size:11px;font-weight:700;color:var(--text2);width:24px}
+.meddpicc-name{font-size:12px;color:var(--text);flex:1;padding:0 8px}
+.meddpicc-score-dots{display:flex;gap:3px}
+.mdot{width:10px;height:10px;border-radius:50%;background:#EBEBEB}
+.mdot.f1{background:var(--sf)}
+.mdot.f2{background:var(--dq)}
+.mdot.f3{background:var(--wp)}
+
+.info-section{padding:0 24px 24px}
+.info-table{width:100%;border-collapse:collapse}
+.info-table tr td{padding:6px 0;font-size:12px}
+.info-table tr td:first-child{color:var(--text2);width:90px;font-weight:400}
+.info-table tr td:last-child{color:var(--text);font-weight:500}
+
+/* ── Agent Chat ── */
+.chat-header{padding:16px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #F5F5F3}
+/* ── 첨부·활동 로그 ── */
+.activity-log{border-bottom:1px solid #F0F0EF;background:#FBFBFA}
+.activity-log-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:10px 20px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text2);text-align:left}
+.activity-log-toggle:hover{background:#F5F5F3}
+.activity-log-toggle #activityLogCaret{font-size:9px;color:var(--text3);transition:transform .15s}
+.activity-log-count{margin-left:auto;font-size:11px;color:var(--text3);background:#EFEEEA;border-radius:10px;padding:1px 8px}
+.activity-log-body{padding:4px 20px 12px;max-height:240px;overflow-y:auto}
+.activity-item{padding:10px 0;border-top:1px solid #F0F0EF}
+.activity-item:first-child{border-top:none}
+.activity-item-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
+.activity-item-time{font-size:10px;color:var(--text3);margin-left:auto;flex-shrink:0}
+.activity-item-preview{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5}
+.activity-item-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.activity-chip{font-size:10px;color:#6B4FBB;background:rgba(107,79,187,.08);border-radius:5px;padding:2px 7px}
+.agent-avatar{width:32px;height:32px;border-radius:50%;position:relative;overflow:hidden;isolation:isolate;flex-shrink:0;background:radial-gradient(circle at 33% 28%,rgba(255,250,253,.82) 0%,rgba(248,191,220,.55) 20%,rgba(217,166,242,.42) 42%,rgba(159,184,246,.38) 64%,rgba(110,120,214,.36) 85%,rgba(58,53,111,.40) 100%);box-shadow:0 4px 14px rgba(110,90,200,.28)}
+.agent-avatar::before{content:'';position:absolute;inset:-32%;border-radius:50%;z-index:0;background:conic-gradient(from 0deg,#FFB5C8,#E8A0FF,#A0C4FF,#B8F0E0,#FFE0A3,#FFB5C8);filter:blur(3px) saturate(1.2);opacity:.62;animation:agentSpin 9s linear infinite}
+.agent-avatar::after{content:'';position:absolute;inset:0;border-radius:50%;z-index:1;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 24%),radial-gradient(circle at 50% 86%,rgba(255,255,255,.40) 0%,rgba(255,255,255,0) 30%),radial-gradient(circle at 50% 50%,rgba(255,255,255,0) 78%,rgba(255,255,255,.50) 90%,rgba(255,255,255,0) 100%),radial-gradient(circle at 70% 78%,rgba(28,20,70,.40) 0%,rgba(28,20,70,0) 46%),radial-gradient(circle at 50% 50%,rgba(28,20,70,0) 64%,rgba(28,20,70,.30) 100%)}
+@keyframes agentSpin{to{transform:rotate(360deg)}}
+.agent-avatar.is-active::before{animation-duration:2.6s}
+@media(prefers-reduced-motion:reduce){.agent-avatar::before{animation:none}}
+.chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.msg-wrap{display:flex;gap:8px;align-items:flex-start}
+.msg-wrap.user{flex-direction:row-reverse}
+.msg-bubble{max-width:76%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.65}
+.msg-bubble.agent{background:var(--blue-light);color:var(--text);border-radius:4px 12px 12px 12px}
+.msg-bubble.user{background:var(--accent);color:#fff;border-radius:12px 4px 12px 12px}
+.msg-bubble.typing{background:var(--blue-light);color:var(--text2)}
+.typing-dots{display:inline-flex;gap:4px;padding:2px 0}
+.typing-dots span{width:6px;height:6px;background:var(--text3);border-radius:50%;animation:bounce .8s infinite}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ── Preview Card ── */
+.preview-card{margin:0 20px 12px;background:#FFFBEB;border-radius:10px;padding:14px}
+.preview-title{font-size:12px;font-weight:700;color:#92400E;margin-bottom:8px}
+.preview-item{font-size:12px;color:var(--text);margin-bottom:4px;display:flex;align-items:flex-start;gap:6px}
+.preview-up{color:#059669;font-weight:600}
+.preview-down{color:#DC2626;font-weight:600}
+
+/* ── Chat Input ── */
+.chat-input-area{padding:14px 20px;background:#FAFAF9;border-top:1px solid #F5F5F3}
+.chat-input-wrap{display:flex;gap:8px;align-items:flex-end}
+.chat-textarea{flex:1;background:#F0F0EE;border:none;border-radius:10px;padding:10px 14px;font-size:13px;resize:none;min-height:42px;max-height:120px;outline:none;transition:background .15s}
+.chat-textarea:focus{background:#E8E8E6}
+.btn-send{background:#111111;color:#fff;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap}
+.btn-send:hover{background:#333333}
+.btn-send:disabled{opacity:.4;cursor:default}
+.btn-update{background:#111111;color:#fff;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;margin:0 20px 12px;width:calc(100% - 40px);transition:all .2s}
+.btn-update:hover{background:#333333}
+.btn-update:disabled{opacity:.4;cursor:default}
+.score-change-anim{animation:scoreFlash .8s ease}
+@keyframes scoreFlash{0%{transform:scale(1)}30%{transform:scale(1.12);color:var(--success)}100%{transform:scale(1)}}
+
+/* ── Exec Layout (new 3-zone) ── */
+#view-exec .exec-layout{display:flex;flex-direction:column;min-height:calc(100vh - 56px);background:var(--bg)}
+.exec-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:40px 40px 0;flex-shrink:0}
+.exec-wf-zone{padding:24px 40px 0;flex-shrink:0}
+.exec-wf-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px}
+.exec-bottom{display:flex;padding:24px 40px 40px;gap:24px;height:800px;flex-shrink:0}
+.exec-board{flex:11;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border-radius:12px}
+.exec-ai{flex:9;display:flex;flex-direction:column;background:var(--card);border-radius:12px}
+
+/* ── Filter Tabs ── */
+.filter-tabs{display:flex;gap:0;padding:0 8px;flex-shrink:0}
+.ftab{padding:12px 14px;font-size:13px;font-weight:500;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.ftab:hover{color:var(--text)}
+.ftab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── AI Panel ── */
+.ai-panel{padding:24px;overflow-y:auto;flex:1;min-height:0}
+.briefing-card{background:#F8F5FF;border-radius:10px;padding:16px;margin-bottom:12px}
+.briefing-text{font-size:13px;color:var(--text);line-height:1.75;white-space:pre-wrap}
+/* ── 영업리더 브리핑 카드 ── */
+.lb-card{background:#fff;border:1px solid #ECEAF5;border-radius:12px;padding:16px 18px;margin-bottom:10px}
+.lb-headline{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.lb-headline .lb-count{font-size:12px;font-weight:600;color:#6B4FBB;background:rgba(107,79,187,.1);border-radius:10px;padding:2px 9px}
+.lb-sub{font-size:12px;color:var(--text2);margin-bottom:2px}
+.lb-section{margin-top:14px}
+.lb-section-title{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:8px}
+.lb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lb-dot.risk{background:#EF4444}
+.lb-dot.bid{background:#F59E0B}
+.lb-dot.act{background:#6B4FBB}
+.lb-table{width:100%;border-collapse:collapse;font-size:12px}
+.lb-table th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;padding:4px 8px;border-bottom:1px solid #F0F0EF}
+.lb-table td{padding:6px 8px;border-bottom:1px solid #F7F6FB;color:var(--text)}
+.lb-table td .lb-score{font-weight:700;color:#EF4444}
+.lb-stage{font-size:11px;color:var(--text2);background:#F4F3F8;border-radius:5px;padding:1px 7px}
+.lb-bid-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;color:var(--text)}
+.lb-dday{font-weight:700;border-radius:6px;padding:2px 8px;font-size:11px;flex-shrink:0}
+.lb-dday.urgent{background:#FEE2E2;color:#DC2626}
+.lb-dday.soon{background:#FEF3C7;color:#D97706}
+.lb-act{display:flex;align-items:flex-start;gap:8px;font-size:12px;padding:5px 0;color:var(--text);line-height:1.5}
+.lb-act .lb-check{width:14px;height:14px;border:1.5px solid #C9C6DC;border-radius:4px;flex-shrink:0;margin-top:1px}
+/* 권고 액션 버튼 */
+.lb-action-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;background:#F8F6FF;border:1px solid #E7E2F6;border-radius:8px;cursor:pointer;font-size:12px;color:var(--text);text-align:left;transition:background .15s,border-color .15s}
+.lb-action-btn:hover{background:#F0EBFF;border-color:#C9BCF0}
+.lb-action-num{font-weight:700;color:#6B4FBB;flex-shrink:0}
+.lb-action-label{flex:1}
+.lb-action-arrow{color:#9B8BCB;font-weight:700;flex-shrink:0}
+/* 구체화 카드 */
+.lb-elab-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px}
+.lb-elab-item{padding:10px 0;border-top:1px solid #F0F0EF}
+.lb-elab-item:first-of-type{border-top:none}
+.lb-elab-head{font-size:12px;font-weight:600;color:var(--text)}
+.lb-elab-meta{font-weight:400;color:var(--text3);font-size:11px}
+.lb-elab-body{font-size:12px;color:var(--text2);line-height:1.6;margin:4px 0 8px}
+.lb-go-btn{font-size:11px;font-weight:600;color:#6B4FBB;background:rgba(107,79,187,.08);border:none;border-radius:6px;padding:5px 10px;cursor:pointer;transition:background .15s}
+.lb-go-btn:hover{background:rgba(107,79,187,.16)}
+/* 입찰 임박 표 메모 버튼 */
+.lb-memo-btn{font-size:11px;font-weight:600;color:#6B4FBB;background:#F4F0FF;border:1px solid #E0D8F5;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap;transition:background .15s}
+.lb-memo-btn:hover{background:#E9E0FB}
+/* ── 사업부문장 전용 브리핑 카드 (전사 경영 관점) ── */
+.eb-card{background:#fff;border:1px solid #ECEAF5;border-radius:12px;padding:16px 18px}
+.eb-headline{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px}
+.eb-gap{background:#FAFAFE;border:1px solid #EEECF8;border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.eb-gap-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--text2)}
+.eb-rate{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.eb-gap-bar{height:7px;background:#ECEAF5;border-radius:4px;overflow:hidden;margin:8px 0 6px}
+.eb-gap-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.eb-gap-sub{font-size:11px;color:var(--text3)}
+.eb-section{margin-top:14px}
+.eb-section-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px}
+.eb-table{width:100%;border-collapse:collapse;font-size:12px}
+.eb-table th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;padding:4px 8px;border-bottom:1px solid #F0F0EF}
+.eb-table td{padding:6px 8px;border-bottom:1px solid #F7F6FB;color:var(--text)}
+.eb-signal-row{display:flex;gap:10px}
+.eb-signal{flex:1;background:#FAFAFE;border:1px solid #EEECF8;border-radius:10px;padding:10px 12px;text-align:center}
+.eb-signal-num{font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.eb-signal-label{font-size:11px;color:var(--text2);margin-top:2px}
+.lb-memo-btn:hover{background:#E9E0FB}
+.ai-query-input{width:100%;background:#F5F5F3;border:none;border-radius:8px;padding:10px 12px;font-size:13px;outline:none;resize:none;min-height:64px;transition:background .15s}
+.ai-query-input:focus{background:#EDEDEB}
+.btn-query{margin-top:8px;background:#111111;color:#fff;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;width:100%;transition:all .2s}
+.btn-query:hover{background:#333333}
+
+/* ── Leader Layout ── */
+.leader-layout{padding:40px;display:flex;flex-direction:column;gap:24px}
+
+/* ── Admin Layout ── */
+.admin-layout{padding:40px}
+.admin-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid #F0F0EE;padding-bottom:0}
+.atab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s}
+.atab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+
+/* ── Conflict Table ── */
+.conflict-table{width:100%;border-collapse:collapse;font-size:12px}
+.conflict-table th{text-align:left;padding:10px 12px;color:var(--text2);font-weight:600;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;border-bottom:1px solid #F0F0EE}
+.conflict-table td{padding:10px 12px;vertical-align:middle;border-bottom:1px solid #F8F8F6}
+.status-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.status-pending{background:#FEF3C7;color:#92400E}
+.status-added{background:#D1FAE5;color:#065F46}
+.status-dismissed{background:#F3F4F6;color:#6B7280}
+.btn-sm{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;border:none;transition:all .2s;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5A3FAA}
+.btn-outline{background:#F5F5F3;color:var(--text2)}
+.btn-outline:hover{background:#EBEBEB;color:var(--text)}
+
+/* ── Misc ── */
+.page-header{padding:20px 40px 0;display:flex;align-items:center;gap:12px}
+.btn-back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);font-weight:500;padding:6px 14px;border-radius:8px;background:#F5F5F3;transition:all .2s}
+.btn-back:hover{color:var(--text);background:#EBEBEB}
+.page-title{font-size:17px;font-weight:700;color:var(--text)}
+.badge-key{background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.badge-ax{background:var(--blue-mid);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.empty-state{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+.loading{text-align:center;padding:30px;color:var(--text3);font-size:13px}
+
+.btn-add{background:#111111;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
+.btn-add:hover{background:#333333}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:28px;width:480px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--text)}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.modal-field input,.modal-field textarea,.modal-field select{width:100%;background:#F5F5F3;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;transition:background .15s}
+.modal-field input:focus,.modal-field textarea:focus{background:#EDEDEB}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#E0E0DE;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ── Agenda Toast ── */
+.agenda-toast{position:fixed;bottom:24px;right:24px;background:#111111;color:#fff;border-radius:10px;padding:12px 20px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.15);transform:translateY(100px);opacity:0;transition:all .4s;z-index:200}
+/* 아젠다 모달 */
+.agenda-modal-overlay{position:fixed;inset:0;background:rgba(20,18,40,.45);display:flex;align-items:center;justify-content:center;z-index:300}
+.agenda-modal{background:#fff;border-radius:14px;padding:22px;width:440px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.agenda-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.agenda-modal-title{font-size:15px;font-weight:700;color:var(--text)}
+.agenda-modal-x{background:none;border:none;font-size:16px;color:var(--text3);cursor:pointer}
+.agenda-modal-sub{font-size:12px;color:var(--text2);margin-bottom:14px}
+.agenda-modal-textarea{width:100%;border:1px solid #E0DDF0;border-radius:9px;padding:11px 13px;font-size:13px;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box}
+.agenda-modal-textarea:focus{outline:none;border-color:#6B4FBB}
+.agenda-modal-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.agenda-quick-chip{font-size:11px;color:#6B4FBB;background:#F4F0FF;border:1px solid #E0D8F5;border-radius:14px;padding:4px 11px;cursor:pointer}
+.agenda-quick-chip:hover{background:#E9E0FB}
+.agenda-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.agenda-modal-cancel{font-size:13px;color:var(--text2);background:#F4F3F8;border:none;border-radius:8px;padding:9px 16px;cursor:pointer}
+.agenda-modal-send{font-size:13px;font-weight:600;color:#fff;background:#6B4FBB;border:none;border-radius:8px;padding:9px 18px;cursor:pointer}
+.agenda-modal-send:hover{background:#5A3FA8}
+/* 영업대표 받은 지시 알림 */
+.alert-item.agenda{background:linear-gradient(135deg,#6B4FBB 0%,#8B6FD6 100%);color:#fff;cursor:pointer}
+.alert-item.agenda .alert-type{background:rgba(255,255,255,.22);color:#fff}
+.alert-item.agenda .alert-item-deal,.alert-item.agenda .alert-item-desc{color:#fff}
+.alert-item.agenda .alert-item-desc{opacity:.9}
+.agenda-toast.show{transform:translateY(0);opacity:1}
+
+/* ── Pipeline Page 1 ── */
+#rep-p1 .p1-body{padding:40px;display:flex;flex-direction:column;gap:24px}
+
+/* ── AI Alert Section ── */
+.ai-alert-section{background:linear-gradient(135deg,#ffffff 70%,#EDE9FE 100%);border-radius:12px;padding:24px 28px}
+.alert-items-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.alert-item{background:#fff;border-radius:8px;padding:12px 16px;cursor:pointer;min-width:200px;flex-shrink:0;transition:background .12s}
+.alert-item:hover{background:#F8F5FF}
+.alert-type{font-size:11px;font-weight:600;margin-bottom:4px}
+.alert-type.danger{color:#EF4444}
+.alert-type.warn{color:#F59E0B}
+.alert-item-deal{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
+.alert-item-desc{font-size:11px;color:var(--text2)}
+
+/* ── Avatar alias (chat messages) ── */
+.agent-avatar-sm{width:28px;height:28px;border-radius:50%;position:relative;overflow:hidden;isolation:isolate;flex-shrink:0;background:radial-gradient(circle at 33% 28%,rgba(255,250,253,.82) 0%,rgba(248,191,220,.55) 20%,rgba(217,166,242,.42) 42%,rgba(159,184,246,.38) 64%,rgba(110,120,214,.36) 85%,rgba(58,53,111,.40) 100%);box-shadow:0 3px 10px rgba(110,90,200,.25)}
+.agent-avatar-sm::before{content:'';position:absolute;inset:-32%;border-radius:50%;z-index:0;background:conic-gradient(from 0deg,#FFB5C8,#E8A0FF,#A0C4FF,#B8F0E0,#FFE0A3,#FFB5C8);filter:blur(2.5px) saturate(1.2);opacity:.62;animation:agentSpin 9s linear infinite}
+.agent-avatar-sm::after{content:'';position:absolute;inset:0;border-radius:50%;z-index:1;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 24%),radial-gradient(circle at 50% 86%,rgba(255,255,255,.40) 0%,rgba(255,255,255,0) 30%),radial-gradient(circle at 50% 50%,rgba(255,255,255,0) 78%,rgba(255,255,255,.50) 90%,rgba(255,255,255,0) 100%),radial-gradient(circle at 70% 78%,rgba(28,20,70,.40) 0%,rgba(28,20,70,0) 46%),radial-gradient(circle at 50% 50%,rgba(28,20,70,0) 64%,rgba(28,20,70,.30) 100%)}
+@media(prefers-reduced-motion:reduce){.agent-avatar-sm::before{animation:none}}
+.agent-avatar-sm.is-active::before{animation-duration:2.6s}
+.meeting-chip{display:inline-flex;align-items:center;padding:3px 8px;background:rgba(107,79,187,.10);color:#6B4FBB;border-radius:12px;font-size:11px;font-weight:600;cursor:default;border:1px solid rgba(107,79,187,.18)}
+.meeting-chip:hover{background:rgba(107,79,187,.18)}
+
+/* ── Score Breakdown ── */
+.score-breakdown{margin-top:8px;background:#FAFAF9;border-radius:8px;overflow:hidden}
+.breakdown-section{padding:10px 14px}
+.breakdown-section+.breakdown-section{border-top:1px solid #F0F0EF}
+.breakdown-header{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px}
+.breakdown-score{color:#6B4FBB;font-weight:700}
+.check{color:#10B981}.cross{color:#EF4444}
+.breakdown-row{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;margin-top:3px}
+
+/* ── Compact KPIs ── */
+.kpi-card.sm{padding:16px 20px}
+.kpi-card.sm .kpi-value{font-size:24px}
+.kpi-card.sm .kpi-label{font-size:11px}
+.kpi-card.xs{padding:12px 16px}
+.kpi-card.xs .kpi-value{font-size:28px}
+.kpi-card.xs .kpi-label{font-size:11px}
+
+/* ── Section dividers ── */
+.meddpicc-section{border-top:1px solid #F0F0EF}
+.info-section{border-top:1px solid #F0F0EF}
+
+/* ── File attachment ── */
+.btn-attach{width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#888;border-radius:6px;border:none;background:none;font-size:16px;flex-shrink:0}
+.btn-attach:hover{background:#F0F0EE}
+.attach-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid #D0CFC9;background:#fff;font-size:18px;font-weight:300;color:#888;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,border-color .15s}
+.attach-btn:hover{background:#F5F5F3;border-color:#AAA9A3}
+</style>
+<script>
+// mammoth / pdf.js — 파일 첨부 시점에 동적 로드 (초기 블로킹 제거)
+let _mammothReady = false, _pdfjsReady = false;
+function _loadScript(src, onload) {
+  const s = document.createElement('script');
+  s.src = src; s.onload = onload;
+  document.head.appendChild(s);
+}
+function ensureMammoth(cb) {
+  if (_mammothReady) { cb(); return; }
+  _loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',
+    () => { _mammothReady = true; cb(); });
+}
+function ensurePdfjs(cb) {
+  if (_pdfjsReady) { cb(); return; }
+  _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    _pdfjsReady = true; cb();
+  });
+}
+</script>
+</head>
+<body>
+<div id="app">
+
+<!-- HEADER -->
+<header id="header">
+  <div class="logo">Deal Board <span>Agent</span></div>
+  <nav class="role-tabs">
+    <button class="role-tab active" onclick="switchRole('rep')">영업대표</button>
+    <button class="role-tab" onclick="switchRole('leader')">영업리더</button>
+    <button class="role-tab" onclick="switchRole('exec')">사업부문장</button>
+    <button class="role-tab" onclick="switchRole('admin')">관리자</button>
+  </nav>
+  <div class="header-right">
+    <div class="user-badge" id="userBadge"><strong>김효진</strong> · 금융2팀</div>
+  </div>
+</header>
+
+<!-- ════════════════════ 영업대표 ════════════════════ -->
+<div id="view-rep" class="view active">
+
+  <!-- Page 1: Pipeline Dashboard -->
+  <div id="rep-p1">
+    <div class="p1-body">
+      <!-- AI 액션 알림 -->
+      <div class="ai-alert-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <span style="font-size:15px;font-weight:600;color:var(--text)">AI 액션 알림</span>
+          <span style="font-size:12px;color:var(--text3)" id="notesCount"></span>
+        </div>
+        <div class="alert-items-row" id="notesRow">
+          <div class="loading">알림 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- Deal List -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Deal List</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="deal-table">
+            <thead>
+              <tr>
+                <th>사업기회</th>
+                <th>Stage</th>
+                <th>Deal Score</th>
+                <th>규모</th>
+                <th>입찰일</th>
+                <th>D-day</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="repDealList">
+              <tr><td colspan="7" class="loading">딜 로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 2: Deal Detail -->
+  <div id="rep-p2">
+    <div class="page-header">
+      <button class="btn-back" onclick="backToP1()">← 목록으로</button>
+      <div>
+        <div class="page-title" id="p2Title">—</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:6px" id="p2Tags"></div>
+    </div>
+    <div class="p2-layout">
+      <!-- Left: Score + SF/DQ/WP + Info -->
+      <div class="p2-left">
+        <!-- Deal Score header -->
+        <div style="padding:18px 20px 12px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500">Deal Score</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:10px">
+            <div class="score-total" id="scoreTotal">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px" id="scoreChange"></div>
+          </div>
+          <div class="score-axis-bar" id="scoreAxisBar">
+            <div class="axis-sf" id="axSF" style="width:0%"><span class="axis-label">SF</span></div>
+            <div class="axis-dq" id="axDQ" style="width:0%"><span class="axis-label">DQ</span></div>
+            <div id="axAC" style="background:#34D399;transition:width .6s ease;display:flex;align-items:center;justify-content:center;overflow:hidden" style="width:0%"><span class="axis-label">AC</span></div>
+            <div id="axCH" style="background:#F59E0B;transition:width .6s ease;display:flex;align-items:center;justify-content:center;overflow:hidden" style="width:0%"><span class="axis-label">CH</span></div>
+            <div id="axRR" style="background:#EC4899;transition:width .6s ease;display:flex;align-items:center;justify-content:center;overflow:hidden" style="width:0%"><span class="axis-label">RR</span></div>
+          </div>
+        </div>
+
+        <!-- SF -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;color:#888">전략적합도 <span style="color:#bbb">/ 20점</span></span>
+            <span style="font-size:14px;font-weight:600;color:#6B4FBB" id="sfVal">—</span>
+          </div>
+          <div style="font-size:12px;color:#444" id="sfDetail">—</div>
+        </div>
+
+        <!-- DQ -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;color:#888">딜 품질 MEDDPICC <span style="color:#bbb">/ 30점</span></span>
+            <span style="font-size:14px;font-weight:600;color:#6B4FBB" id="dqVal">—</span>
+          </div>
+          <div id="dqDetail"></div>
+        </div>
+
+        <!-- AC -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;color:#888">활동성 <span style="color:#bbb">/ 15점</span></span>
+            <span style="font-size:14px;font-weight:600;color:#34D399" id="acVal">—</span>
+          </div>
+          <div style="font-size:12px;color:#444" id="acDetail">—</div>
+        </div>
+
+        <!-- CH -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;color:#888">고객사 이력 <span style="color:#bbb">/ 20점</span></span>
+            <span style="font-size:14px;font-weight:600;color:#F59E0B" id="chVal">—</span>
+          </div>
+          <div style="font-size:12px;color:#444" id="chDetail">—</div>
+        </div>
+
+        <!-- RR -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;color:#888">담당자 승률 <span style="color:#bbb">/ 15점</span></span>
+            <span style="font-size:14px;font-weight:600;color:#EC4899" id="rrVal">—</span>
+          </div>
+          <div style="font-size:12px;color:#444" id="rrDetail">—</div>
+        </div>
+
+        <!-- 다음 액션 추천 -->
+        <div id="nextActionBox" style="display:none;padding:12px 20px;border-top:1px solid #F0F0EF;background:#FBFAFF">
+          <div style="font-size:11px;font-weight:700;color:#6B4FBB;margin-bottom:6px">💡 다음 확인하면 좋을 것</div>
+          <div id="nextActionList" style="display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+
+        <!-- Info toggle -->
+        <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
+          <button onclick="toggleDealInfo()" id="dealInfoToggleBtn" style="width:100%;display:flex;justify-content:space-between;font-size:12px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0">
+            <span>사업기회 상세</span><span>펼치기 ▼</span>
+          </button>
+          <div id="dealInfoSection" style="display:none;margin-top:8px">
+            <table class="info-table" id="dealInfoTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Agent Chat -->
+      <div class="p2-right">
+        <div class="chat-header">
+          <div class="agent-avatar"></div>
+          <div>
+            <div style="font-weight:600;font-size:13px">Sales Assistant</div>
+          </div>
+          <div style="margin-left:auto;font-size:11px;color:var(--text3)" id="stageQuotaInfo"></div>
+        </div>
+        <div id="activityLog" class="activity-log" style="display:none">
+          <button class="activity-log-toggle" onclick="toggleActivityLog()">
+            <span id="activityLogCaret">▶</span>
+            <span>📎 첨부·활동 로그</span>
+            <span id="activityLogCount" class="activity-log-count"></span>
+          </button>
+          <div id="activityLogBody" class="activity-log-body" style="display:none"></div>
+        </div>
+        <!-- 리더의 코칭 메모 섹션 -->
+        <div id="coachingNotesSection" style="display:none;background:#F8F4FF;border:1px solid #E0D8F5;border-radius:6px;padding:12px;margin-bottom:12px;">
+          <div style="font-weight:600;font-size:13px;color:#5A3B99;margin-bottom:8px;">
+            📝 리더의 코칭 메모
+          </div>
+          <div id="coachingNotesList"></div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div id="previewArea" style="display:none"></div>
+        <button class="btn-update" id="btnUpdate" style="display:none" onclick="doUpdate()">✓ 오늘 내용 업데이트 하기</button>
+        <div class="chat-input-area">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">회의록, 통화 요약, 자유 메모를 입력하세요</div>
+          <div class="chat-input-wrap">
+            <button class="attach-btn" onclick="document.getElementById('repFileInput').click()" title="파일 첨부">+</button>
+            <input type="file" id="repFileInput" style="display:none" accept=".docx,.pdf,.txt,.md,.csv" onchange="handleRepFileAttachment(event)">
+            <textarea class="chat-textarea" id="chatInput" placeholder="예) 오늘 과장님과 미팅했는데..." rows="2" onkeydown="onChatKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="btn-send" id="btnSend" onclick="sendChat()">전송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ 영업리더 ════════════════════ -->
+<div id="view-leader" class="view">
+  <div class="leader-layout">
+    <div class="kpi-grid kpi-grid-4">
+      <div class="kpi-card sm" onclick="showAllDealsModal()" style="cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 0 0 2px var(--accent)'" onmouseout="this.style.boxShadow=''"><div class="kpi-label">팀 전체 딜 <span style="font-size:10px;color:var(--accent)">↗</span></div><div class="kpi-value" id="lkpi-count">—</div><div class="kpi-sub">건 · 클릭하면 전체보기</div></div>
+      <div class="kpi-card sm"><div class="kpi-label">팀 총 규모</div><div class="kpi-value" id="lkpi-amt">—</div><div class="kpi-sub">억원</div></div>
+      <div class="kpi-card sm"><div class="kpi-label">팀 평균 Score</div><div class="kpi-value" id="lkpi-score">—</div><div class="kpi-sub">/ 100점</div></div>
+      <div class="kpi-card sm"><div class="kpi-label">입찰 임박</div><div class="kpi-value danger" id="lkpi-urgent">—</div><div class="kpi-sub">건 (30일 이내)</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;min-height:520px">
+      <!-- 팀원별 현황 -->
+      <div class="card" style="overflow:hidden;display:flex;flex-direction:column">
+        <div class="card-head"><span class="card-title">팀원별 현황</span><span style="font-size:11px;color:var(--text3)">팀 평균 -15점 이하 🔴</span></div>
+        <div style="overflow:auto;flex:1;max-height:520px">
+          <table class="deal-table">
+            <thead>
+              <tr><th>담당자</th><th>딜 수</th><th>총 규모</th><th>평균 Score</th><th>상태</th></tr>
+            </thead>
+            <tbody id="leaderRepList"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Sales Assistant chat -->
+      <div class="card" style="display:flex;flex-direction:column;overflow:hidden;min-height:520px">
+        <div class="chat-header">
+          <div class="agent-avatar"></div>
+          <div><div style="font-weight:600;font-size:13px">Sales Assistant</div></div>
+        </div>
+        <div class="chat-messages" id="leaderMessages" style="flex:1;min-height:380px;overflow-y:auto"></div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <button class="attach-btn" onclick="document.getElementById('leaderFileInput').click()" title="파일 첨부">+</button>
+            <input type="file" id="leaderFileInput" style="display:none" accept=".docx,.pdf,.txt,.md,.csv" onchange="handleLeaderFileAttachment(event)">
+            <textarea class="chat-textarea" id="leaderQuery" placeholder="팀 전체 딜에 대해 질문하세요..." rows="1" oninput="autoResize(this)" onkeydown="onLeaderChatKey(event)"></textarea>
+            <button class="btn-send" onclick="sendLeaderQuery()">전송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입찰 임박 -->
+    <div class="card" id="leaderUrgentCard">
+      <div class="card-head"><span class="card-title">⚡ 입찰 임박 딜 (30일 이내)</span></div>
+      <div style="overflow-x:auto">
+        <table class="deal-table">
+          <thead><tr><th>사업기회</th><th>담당자</th><th>Stage</th><th>규모</th><th>입찰일</th><th>D-day</th><th>액션</th></tr></thead>
+          <tbody id="leaderUrgentList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ 전체 딜 모달 (영업리더) ════════════════════ -->
+<div id="allDealsModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;width:92%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 28px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:16px">팀 전체 딜</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px" id="allDealsSubtitle"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <!-- 필터 -->
+        <select id="allDealsStageFilter" onchange="filterAllDeals()" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--text)">
+          <option value="">전체 Stage</option>
+          <option value="Lead">Lead</option>
+          <option value="Identified">Identified</option>
+          <option value="Identified-Remind">Identified-Remind</option>
+          <option value="Identified-Registered">Identified-Registered</option>
+          <option value="Validated">Validated</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Negotiated">Negotiated</option>
+          <option value="우선협상">우선협상</option>
+          <option value="계약완료">계약완료</option>
+        </select>
+        <select id="allDealsRepFilter" onchange="filterAllDeals()" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--text)">
+          <option value="">전체 담당자</option>
+        </select>
+        <button onclick="closeAllDealsModal()" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:#fff;font-size:18px;color:var(--text2);cursor:pointer;line-height:1">×</button>
+      </div>
+    </div>
+    <!-- 테이블 -->
+    <div style="overflow-y:auto;flex:1;padding:0 28px 24px">
+      <table class="deal-table" style="width:100%;margin-top:8px">
+        <thead>
+          <tr>
+            <th>사업기회</th><th>고객사</th><th>담당자</th><th>Stage</th>
+            <th>Deal Score</th><th>규모(억)</th><th>입찰일</th><th>D-day</th>
+          </tr>
+        </thead>
+        <tbody id="allDealsList"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ 사업부문장 ════════════════════ -->
+<div id="view-exec" class="view">
+  <div class="exec-layout">
+    <!-- Collapse toggle -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;padding:12px 40px 0">
+      <button id="collapseBtn" onclick="toggleExecTop()" style="font-size:11px;color:var(--text2);padding:4px 12px;background:#F5F5F3;border:none;border-radius:6px;cursor:pointer">접기 ▲</button>
+    </div>
+
+    <!-- Zone 1+2: collapsible -->
+    <div id="execTopSection">
+      <!-- Zone 1: KPIs -->
+      <div class="exec-kpi-row">
+        <div class="kpi-card xs"><div class="kpi-label">전체 파이프라인</div><div class="kpi-value" id="ekpi-amt">—</div><div class="kpi-sub">억원</div></div>
+        <div class="kpi-card xs"><div class="kpi-label">전체 딜 수</div><div class="kpi-value" id="ekpi-count">—</div><div class="kpi-sub">건</div></div>
+        <div class="kpi-card xs"><div class="kpi-label">평균 Score</div><div class="kpi-value" id="ekpi-score">—</div><div class="kpi-sub">/ 100점</div></div>
+        <div class="kpi-card xs"><div class="kpi-label">수주 Gap</div><div class="kpi-value danger" id="ekpi-gap">—</div><div class="kpi-sub">억원 부족</div></div>
+      </div>
+
+      <!-- Zone 2: Waterfall Canvas -->
+      <div class="exec-wf-zone">
+        <div class="exec-wf-title">파이프라인 Waterfall (확률 가중 · 가로 바)</div>
+        <canvas id="wfCanvas" style="width:100%;display:block;height:140px"></canvas>
+      </div>
+    </div>
+
+    <!-- Zone 3: Deal Board + AI -->
+    <div class="exec-bottom">
+      <!-- Deal Board (70%) -->
+      <div class="exec-board">
+        <div class="filter-tabs" id="execFilterTabs">
+          <button class="ftab active" onclick="execFilter('focus',this)">🎯 Focus딜</button>
+          <button class="ftab" onclick="execFilter('금융사업본부',this)">금융</button>
+          <button class="ftab" onclick="execFilter('전략사업본부',this)">전략</button>
+          <button class="ftab" onclick="execFilter('AX',this)">AX</button>
+          <button class="ftab" onclick="execFilter('urgent',this)">⚡ 입찰임박</button>
+          <button class="ftab" onclick="execFilter('all',this)">전체</button>
+        </div>
+        <div style="overflow-x:auto;overflow-y:auto;flex:1">
+          <table class="deal-table">
+            <thead>
+              <tr>
+                <th>사업기회</th><th>고객사</th><th>Stage</th><th style="min-width:120px">Score</th><th>금액</th>
+              </tr>
+            </thead>
+            <tbody id="execDealList"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AI Panel (35%) chat-style -->
+      <div class="exec-ai" id="execRightPanel">
+        <div class="chat-header">
+          <div class="agent-avatar"></div>
+          <div><div style="font-weight:600;font-size:13px">Sales Assistant</div></div>
+        </div>
+        <div class="chat-messages" id="execMessages" style="flex:1"></div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <button class="attach-btn" onclick="document.getElementById('execFileInput').click()" title="파일 첨부">+</button>
+            <input type="file" id="execFileInput" style="display:none" accept=".docx,.pdf,.txt,.md,.csv" onchange="handleExecFileAttachment(event)">
+            <textarea class="chat-textarea" id="execQuery" placeholder="예) 이번 분기 Gap을 어떻게 줄일 수 있을까요?" rows="1" oninput="autoResize(this)" onkeydown="onExecChatKey(event)"></textarea>
+            <button class="btn-send" onclick="sendExecQuery()">전송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ 관리자 ════════════════════ -->
+<div id="view-admin" class="view">
+  <div class="admin-layout">
+    <div style="font-size:20px;font-weight:700;margin-bottom:24px;color:var(--text)">관리자 페이지</div>
+    <div class="admin-tabs">
+      <button class="atab active" onclick="adminTab('conflicts')">충돌 로그</button>
+      <button class="atab" onclick="adminTab('fewshots')">Few-shot 관리</button>
+      <button class="atab" onclick="adminTab('prompt')">프롬프트 편집</button>
+      <button class="atab" onclick="adminTab('meddpicc-analysis')">MEDDPICC 분석</button>
+    </div>
+
+    <!-- 충돌 로그 -->
+    <div class="admin-panel active" id="panel-conflicts">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span style="font-size:13px;font-weight:600;color:var(--text2)">필터:</span>
+        <select id="conflictFilterItem" onchange="loadConflicts()" style="background:#F5F5F3;border:none;border-radius:6px;padding:5px 10px;font-size:12px;outline:none">
+          <option value="">전체 항목</option>
+          <option>E</option><option>C</option><option>M</option><option>DC</option>
+          <option>DP</option><option>PP</option><option>I</option><option>CO</option>
+        </select>
+        <select id="conflictFilterStatus" onchange="loadConflicts()" style="background:#F5F5F3;border:none;border-radius:6px;padding:5px 10px;font-size:12px;outline:none">
+          <option value="">전체 상태</option>
+          <option value="pending">미처리</option>
+          <option value="added_to_fewshot">Few-shot 추가됨</option>
+          <option value="dismissed">무시됨</option>
+        </select>
+        <button onclick="loadConflicts()" style="padding:6px 14px;border-radius:6px;background:#111111;color:#fff;font-size:12px;font-weight:600">새로고침</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="conflict-table">
+          <thead>
+            <tr>
+              <th>항목</th><th>딜</th><th>Stage</th><th>트리거 표현</th>
+              <th>LLM 점수</th><th>최종 점수</th><th>상태</th><th>처리</th>
+            </tr>
+          </thead>
+          <tbody id="conflictList"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Few-shot 관리 -->
+    <div class="admin-panel" id="panel-fewshots">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:14px;font-weight:600">등록된 Few-shot 예시</span>
+        <button class="btn-add" onclick="openAddFewshotModal()">+ 직접 추가</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="conflict-table">
+          <thead>
+            <tr><th>항목</th><th>입력 예시</th><th>정답</th><th>오답</th><th>판단 이유</th><th>등록일</th><th></th></tr>
+          </thead>
+          <tbody id="fewshotList"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MEDDPICC 분석 -->
+    <div class="admin-panel" id="panel-meddpicc-analysis">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:14px;font-weight:700">MEDDPICC 수주 상관관계 분석</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px" id="meddpiccAnalysisMeta"></div>
+        </div>
+        <button onclick="loadMeddpiccAnalysis()" style="padding:6px 14px;border-radius:6px;background:#111;color:#fff;font-size:12px;font-weight:600">새로고침</button>
+      </div>
+
+      <!-- 항목별 분석 테이블 + 바 -->
+      <div style="overflow-x:auto;margin-bottom:32px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:8px 12px;color:var(--text2);font-weight:600">항목</th>
+              <th style="text-align:center;padding:8px 12px;color:var(--text2);font-weight:600">수주 딜 평균</th>
+              <th style="text-align:center;padding:8px 12px;color:var(--text2);font-weight:600">진행 딜 평균</th>
+              <th style="text-align:left;padding:8px 12px;color:var(--text2);font-weight:600;min-width:180px">수주 딜 점수 분포</th>
+              <th style="text-align:center;padding:8px 12px;color:var(--text2);font-weight:600">수주 시 2점↑ 비율</th>
+              <th style="text-align:center;padding:8px 12px;color:var(--text2);font-weight:600">현재 가중치</th>
+            </tr>
+          </thead>
+          <tbody id="meddpiccAnalysisTable"></tbody>
+        </table>
+      </div>
+
+      <!-- 가중치 조정 -->
+      <div style="background:#F8F8F7;border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">가중치 조정</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px">분석 결과를 참고해 수주 연관성이 낮은 항목의 가중치를 낮추세요. 저장 시 즉시 Score 계산에 반영됩니다.</div>
+        <div id="weightSliders" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px;gap:8px">
+          <button onclick="resetWeights()" style="padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer">기본값으로</button>
+          <button onclick="saveWeights()" style="padding:7px 16px;border-radius:7px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer">가중치 저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 프롬프트 편집 -->
+    <div class="admin-panel" id="panel-prompt">
+      <div style="margin-bottom:10px;font-size:13px;color:var(--text2)">Agent 시스템 프롬프트를 직접 편집합니다. 저장 후 즉시 반영됩니다.</div>
+      <textarea id="promptEditor" style="width:100%;height:420px;background:#F5F5F3;border:none;border-radius:10px;padding:20px;font-size:12px;font-family:monospace;outline:none;resize:vertical;line-height:1.7;color:var(--text)" onkeydown="if(event.key==='Tab'){event.preventDefault();const s=this.selectionStart;this.value=this.value.substring(0,s)+'  '+this.value.substring(this.selectionEnd);this.selectionStart=this.selectionEnd=s+2}"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px">
+        <button onclick="loadPrompt()" class="btn-sm btn-outline">원본으로 복원</button>
+        <button onclick="savePrompt()" class="btn-sm btn-primary">저장하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- 충돌 처리 Modal -->
+<div class="modal-bg" id="conflictModal">
+  <div class="modal">
+    <div class="modal-title">충돌 처리</div>
+    <div id="conflictModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-outline" onclick="closeModal('conflictModal')">취소</button>
+      <button class="btn-sm btn-outline" onclick="resolveConflict(false)">무시</button>
+      <button class="btn-sm btn-primary" onclick="resolveConflict(true)">Few-shot에 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- Few-shot 추가 Modal -->
+<div class="modal-bg" id="fewshotModal">
+  <div class="modal">
+    <div class="modal-title">Few-shot 직접 추가</div>
+    <div class="modal-field"><label>항목</label>
+      <select id="fsItem" style="width:100%;background:#F5F5F3;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none">
+        <option>E</option><option>C</option><option>M</option><option>DC</option><option>DP</option><option>PP</option><option>I</option><option>CO</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>입력 예시</label><textarea id="fsInput" rows="3" placeholder="LLM이 틀리게 평가한 입력 텍스트"></textarea></div>
+    <div class="modal-field"><label>정답 점수</label><input type="number" id="fsCorrect" min="0" max="3" placeholder="0~3"></div>
+    <div class="modal-field"><label>LLM 오답 점수</label><input type="number" id="fsWrong" min="0" max="3" placeholder="0~3"></div>
+    <div class="modal-field"><label>판단 이유</label><textarea id="fsReason" rows="2" placeholder="왜 정답이 그 점수인지 설명"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-outline" onclick="closeModal('fewshotModal')">취소</button>
+      <button class="btn-sm btn-primary" onclick="saveFewshot()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 아젠다 Push Toast -->
+<div class="agenda-toast" id="agendaToast"></div>
+
+<!-- 아젠다 Push 모달 -->
+<div class="agenda-modal-overlay" id="agendaModal" style="display:none" onclick="if(event.target===this)closeAgendaModal()">
+  <div class="agenda-modal">
+    <div class="agenda-modal-head">
+      <div class="agenda-modal-title">📋 영업대표에게 지시 전달</div>
+      <button class="agenda-modal-x" onclick="closeAgendaModal()">✕</button>
+    </div>
+    <div class="agenda-modal-sub" id="agendaModalSub"></div>
+    <textarea id="agendaModalText" class="agenda-modal-textarea" rows="4" placeholder="예) 다음 주 미팅 전에 의사결정권자(예산 전결권자) 직접 접촉 여부를 확인해 주세요."></textarea>
+    <div class="agenda-modal-quick" id="agendaModalQuick"></div>
+    <div class="agenda-modal-actions">
+      <button class="agenda-modal-cancel" onclick="closeAgendaModal()">취소</button>
+      <button class="agenda-modal-send" onclick="submitAgenda()">지시 전송 ▸</button>
+    </div>
+  </div>
+</div>
+
+<!-- 코칭 메모 모달 -->
+<div class="modal-bg" id="coachingNoteModal">
+  <div class="modal">
+    <div class="modal-title">코칭 메모</div>
+    <input type="hidden" id="coachingNoteOppId">
+    <div class="modal-field">
+      <label>메모 내용</label>
+      <textarea id="coachingNoteInput"
+                placeholder="이 딜에 대한 코칭 메모를 작성하세요..."
+                style="height:150px;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeCoachingNoteModal()">취소</button>
+      <button class="btn-primary" onclick="saveCoachingNote()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+const S = {
+  role: 'rep',
+  repName: '김효진',
+  repTeam: '금융2팀',
+  repDept: '금융사업본부',
+  opps: [],
+  currentOpp: null,
+  conversation: [],
+  evalResult: null,
+  pendingFile: null,
+  askedCount: 0,
+  execFilter: 'all',
+  execOpps: [],
+  conflictTarget: null,
+  meetingContext: null,
+};
+
+const MEDDPICC_NAMES = {E:'예산 집행 권한',C:'내부 추진자',M:'기대 성과',DC:'평가 기준',DP:'결정 절차',PP:'계약 절차',I:'핵심 Pain',CO:'경쟁 현황'};
+// 한국어 조사 헬퍼 (받침 여부로 이/가, 을/를 선택)
+function josaIGa(word){ if(!word) return '가'; const c=word.charCodeAt(word.length-1)-0xAC00; if(c<0||c>11171) return '가'; return (c%28)!==0?'이':'가'; }
+function josaEulReul(word){ if(!word) return '를'; const c=word.charCodeAt(word.length-1)-0xAC00; if(c<0||c>11171) return '를'; return (c%28)!==0?'을':'를'; }
+const STAGE_MAX_Q = {Lead:0,Identified:1,'Identified-Remind':1,'Identified-Registered':2,Validated:2,Qualified:3,Negotiated:3,'우선협상':2,'계약완료':0};
+const STAGE_NORMAL = {Lead:45,Identified:60,'Identified-Remind':30,'Identified-Registered':30,Validated:14,Qualified:7,Negotiated:7,'우선협상':7,'계약완료':0};
+
+// ── API ──
+const _apiCache = new Map();  // GET 응답 단기 캐시 (탭 전환 속도 개선)
+const _API_TTL = 30000;       // 30초
+
+function invalidateApiCache() { _apiCache.clear(); }
+
+async function api(method, url, body) {
+  // GET은 단기 캐시 — 단, 단건 딜 상세(/opportunities/{id})는 점수 최신성 위해 제외
+  const cacheable = (method === 'GET') && !/\/api\/opportunities\/[^/?]+$/.test(url);
+  if (cacheable) {
+    const hit = _apiCache.get(url);
+    if (hit && (Date.now() - hit.t) < _API_TTL) return hit.v;
+  }
+  const opts = {method, headers:{'Content-Type':'application/json'}};
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  const data = await r.json();
+  if (cacheable) _apiCache.set(url, {v: data, t: Date.now()});
+  // 데이터를 바꾸는 요청 후엔 캐시 무효화
+  if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+    if (url.includes('/update') || url.includes('/agenda') || url.includes('/conflicts') || url.includes('/fewshots')) {
+      invalidateApiCache();
+    }
+  }
+  return data;
+}
+
+// ── Utils ──
+function fmt(n) { return (n||0).toLocaleString('ko-KR'); }
+function fmtAmt(n) { return fmt(Math.round(n)); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function daysTo(dateStr) {
+  if (!dateStr) return null;
+  return Math.round((new Date(dateStr) - new Date()) / 86400000);
+}
+
+function stageBadge(stage) {
+  const colors = {
+    'Lead':'#AAAAAA','Identified':'#3B82F6','Identified-Remind':'#60A5FA',
+    'Identified-Registered':'#2563EB','Validated':'#10B981','Qualified':'#6B4FBB',
+    'Negotiated':'#EC4899','우선협상':'#F59E0B','계약완료':'#059669'
+  };
+  const c = colors[stage] || '#AAAAAA';
+  return `<span style="color:${c};font-weight:500;font-size:12px">${stage}</span>`;
+}
+
+function bizTag(t) {
+  const c = {AX:'#6B4FBB',DT:'#0891B2',BAU:'#888888'}[t] || '#888888';
+  return `<span style="color:${c};font-size:11px;font-weight:700;letter-spacing:0.3px">${t}</span>`;
+}
+
+function scoreBarHtml(score, size='') {
+  const s = score || {strategic_fit:0,deal_quality:0,activity:0,cust_history:0,rep_rate:0,total:0};
+  const sf = ((s.strategic_fit ?? 0) / 100 * 100).toFixed(1);
+  const dq = ((s.deal_quality  ?? 0) / 100 * 100).toFixed(1);
+  const ac = ((s.activity      ?? 0) / 100 * 100).toFixed(1);
+  const ch = ((s.cust_history  ?? 0) / 100 * 100).toFixed(1);
+  const rr = ((s.rep_rate      ?? 0) / 100 * 100).toFixed(1);
+  const tn = size === 'static' ? '' : 'transition:width .6s ease;';
+  return `<div class="score-bar ${size}">
+    <div class="bar-sf" style="width:${sf}%"></div>
+    <div class="bar-dq" style="width:${dq}%"></div>
+    <div style="background:#34D399;height:100%;${tn}width:${ac}%"></div>
+    <div style="background:#F59E0B;height:100%;${tn}width:${ch}%"></div>
+    <div style="background:#EC4899;height:100%;${tn}width:${rr}%"></div>
+  </div>`;
+}
+
+function meddpiccDotsHtml(scores) {
+  // 표준 MEDDIC 순서: M(성과) E(예산권한) D(평가기준) D(결정절차) I(Pain) C(추진자) + 경쟁(CO)
+  const items = ['M','E','DC','DP','I','C','CO'];
+  return items.map(k => {
+    const name = MEDDPICC_NAMES[k] || k;
+    const v = (scores||{})[k] || 0;
+    const dots = [0,1,2].map(i => {
+      const filled = i < v;
+      const cls = filled ? (v===3?'mdot f3':v===2?'mdot f2':'mdot f1') : 'mdot';
+      return `<span class="${cls}"></span>`;
+    }).join('');
+    return `<div class="meddpicc-row-full">
+      <span class="meddpicc-key">${k}</span>
+      <span class="meddpicc-name">${name}</span>
+      <div class="meddpicc-score-dots">${dots}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── New left-panel helpers ──
+function meddpiccRowsHtml(medd) {
+  // 표준 MEDDIC 순서: M(성과) E(예산권한) D(평가기준) D(결정절차) I(Pain) C(추진자) + 경쟁(CO)
+  const items = ['M','E','DC','DP','I','C','CO'];
+  const names = {E:'예산 집행 권한',C:'내부 추진자',M:'기대 성과',DC:'평가 기준',DP:'결정 절차',I:'핵심 Pain',CO:'경쟁 현황'};
+  return items.map(k => {
+    const v = (medd||{})[k] || 0;
+    const dots = [0,1,2].map(i =>
+      `<span style="color:${i<v?'#8B5CF6':'#D0D0D0'};font-size:12px;line-height:1">${i<v?'●':'○'}</span>`
+    ).join('');
+    return `<div style="display:flex;align-items:center;padding:2px 0;font-size:12px;color:#444;gap:4px">
+      <span style="font-weight:700;color:#888;width:22px;flex-shrink:0;font-size:11px">${k}</span>
+      <span style="flex:1;color:#555">${names[k]}</span>
+      <span style="display:flex;gap:2px;flex-shrink:0">${dots}</span>
+    </div>`;
+  }).join('');
+}
+
+function sfDetailHtml(opp) {
+  function flag(v, label) {
+    return `<span style="color:${v?'#10B981':'#EF4444'}">${v?'✓':'✗'}</span> <span style="color:#444">${label}</span>`;
+  }
+  return `${flag(opp.AX사업여부,'AX사업')} &nbsp;·&nbsp; ${flag(opp.중점고객여부,'중점고객')} &nbsp;·&nbsp; ${flag(opp.중점사업여부,'중점사업')}`;
+}
+
+function wpDetailHtml(opp) {
+  const wp = opp.score?.win_potential || 0;
+  const momentum = wp >= 20 ? '모멘텀 정상' : '모멘텀 주의';
+  const mColor = wp >= 20 ? '#10B981' : '#F59E0B';
+  const wr = opp._rep_win_rate;
+  const wrPart = (wr != null)
+    ? ` &nbsp;·&nbsp; <span title="과거 ${opp._rep_deal_count||0}건 기준">${opp.영업대표} 수주율 <strong>${wr}%</strong></span>`
+    : '';
+  return `수주확도 <strong>${opp.수주확도}%</strong> &nbsp;·&nbsp; ${opp.stage} &nbsp;·&nbsp; <span style="color:${mColor}">${momentum}</span>${wrPart}`;
+}
+
+function renderDealDetail(opp) {
+  if (!opp) return;
+  const medd = opp.meddpicc || {};
+  document.getElementById('sfDetail').innerHTML = sfDetailHtml(opp);
+  document.getElementById('dqDetail').innerHTML = meddpiccRowsHtml(medd);
+  document.getElementById('wpDetail').innerHTML = wpDetailHtml(opp);
+  const dBid = daysTo(opp.입찰일);
+  document.getElementById('dealInfoTable').innerHTML = `
+    <tr><td>Stage</td><td>${stageBadge(opp.stage)}</td></tr>
+    <tr><td>사업유형</td><td>${bizTag(opp.사업유형)}</td></tr>
+    <tr><td>수주목표액</td><td><strong>${fmtAmt(opp.수주목표액)}억원</strong></td></tr>
+    <tr><td>수주확도</td><td>${opp.수주확도}%</td></tr>
+    <tr><td>입찰일</td><td>${opp.입찰일||'—'} ${dBid!==null&&dBid>=0?`<strong style="color:var(--danger)">D-${dBid}</strong>`:''}</td></tr>
+    <tr><td>예상계약일</td><td>${opp.예상계약일||'—'}</td></tr>
+    ${opp.다음_단계 ? `<tr><td>다음 단계</td><td style="color:#6B4FBB;font-weight:600">${opp.다음_단계}</td></tr>` : ''}
+    ${opp.주요_사업내용 ? `<tr><td>사업 내용</td><td style="font-size:12px;color:var(--text2);line-height:1.5">${opp.주요_사업내용}</td></tr>` : ''}
+  `;
+
+  // 다음 액션 추천 — 비어 있는(약한) MEDDIC 항목 기준
+  const NEXT_HINT = {
+    M: '기대 효과(매출·비용 목표) 수치 확보',
+    E: '예산 집행 최종 결정권자 확인',
+    DC: '고객의 솔루션 평가 기준 파악',
+    DP: '내부 결재 절차·계약 일정 확인',
+    I: '핵심 Pain의 구체적 근거 확보',
+    C: '내부 추진자(Champion) 확보',
+    CO: '경쟁 구도·차별화 포인트 정리',
+  };
+  const order = ['M','E','DC','DP','I','C','CO'];
+  const weak = order.filter(k => (medd[k]||0) <= 1 && NEXT_HINT[k]).slice(0,3);
+  const box = document.getElementById('nextActionBox');
+  const list = document.getElementById('nextActionList');
+  if (weak.length && box && list) {
+    list.innerHTML = weak.map(k =>
+      `<div style="font-size:12px;color:var(--text);display:flex;gap:6px"><span style="color:#6B4FBB">·</span><span>${NEXT_HINT[k]}</span></div>`
+    ).join('');
+    box.style.display = 'block';
+  } else if (box) {
+    box.style.display = 'none';
+  }
+}
+
+function toggleDealInfo() {
+  const sec = document.getElementById('dealInfoSection');
+  const btn = document.getElementById('dealInfoToggleBtn');
+  const isHidden = sec.style.display === 'none';
+  sec.style.display = isHidden ? 'block' : 'none';
+  btn.innerHTML = isHidden
+    ? '<span>사업기회 상세</span><span>닫기 ▲</span>'
+    : '<span>사업기회 상세</span><span>펼치기 ▼</span>';
+}
+
+function stageAlert(opp) {
+  const alert = opp.stage_alert;
+  if (alert === 'danger') return '<span title="Stage 체류 위험" style="font-size:14px">🚨</span>';
+  if (alert === 'warning') return '<span title="Stage 체류 주의" style="font-size:14px">⚠️</span>';
+  return '';
+}
+
+function addMsg(role, text, extra='') {
+  const msgs = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = `msg-wrap ${role === 'user' ? 'user' : ''}`;
+  const html = role === 'agent'
+    ? `<div class="agent-avatar-sm"></div><div class="msg-bubble agent">${text.replace(/\n/g,'<br>')}${extra}</div>`
+    : `<div class="msg-bubble user">${text.replace(/\n/g,'<br>')}</div>`;
+  wrap.innerHTML = html;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrap;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.id = 'typingBubble';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingBubble');
+  if (el) el.remove();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('agendaToast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Auto-resize textarea ──
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 300) + 'px';
+}
+
+// ── Generalized chat panel message ──
+function addMsgToPanel(panelId, role, text) {
+  const msgs = document.getElementById(panelId);
+  if (!msgs) return;
+  const wrap = document.createElement('div');
+  wrap.className = `msg-wrap ${role === 'user' ? 'user' : ''}`;
+  const html = role === 'agent'
+    ? `<div class="agent-avatar-sm"></div><div class="msg-bubble agent">${text.replace(/\n/g,'<br>')}</div>`
+    : `<div class="msg-bubble user">${text.replace(/\n/g,'<br>')}</div>`;
+  wrap.innerHTML = html;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrap;
+}
+
+function showTypingInPanel(panelId) {
+  const msgs = document.getElementById(panelId);
+  if (!msgs) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.id = panelId + '-typing';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTypingInPanel(panelId) {
+  const el = document.getElementById(panelId + '-typing');
+  if (el) el.remove();
+}
+
+// ── File attachment ──
+function handleRepFileAttachment(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  handleFileAttachment(file, 'rep');
+}
+
+function handleLeaderFileAttachment(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  handleFileAttachment(file, 'leader');
+}
+
+function handleExecFileAttachment(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  handleFileAttachment(file, 'exec');
+}
+
+async function extractFileText(file) {
+  const n = file.name.toLowerCase();
+  if (n.endsWith('.txt') || n.endsWith('.md') || n.endsWith('.csv')) return await file.text();
+  if (n.endsWith('.docx')) {
+    await new Promise(resolve => ensureMammoth(resolve));
+    const ab = await file.arrayBuffer();
+    const r = await mammoth.extractRawText({ arrayBuffer: ab });
+    return r.value;
+  }
+  if (n.endsWith('.pdf')) {
+    await new Promise(resolve => ensurePdfjs(resolve));
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    let out = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent();
+      out += tc.items.map(it => it.str).join(' ') + '\n';
+    }
+    return out;
+  }
+  if (n.endsWith('.doc')) throw new Error('레거시 .doc는 지원하지 않습니다. .docx로 저장해 주세요.');
+  if (n.endsWith('.hwp') || n.endsWith('.hwpx')) throw new Error('한글(.hwp)은 지원하지 않습니다. PDF/Word로 내보내 주세요.');
+  throw new Error('지원하지 않는 파일 형식입니다.');
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function fadeBubble(bubble, html) {
+  bubble.style.transition = 'opacity 0.15s ease';
+  bubble.style.opacity = '0';
+  await new Promise(r => setTimeout(r, 160));
+  bubble.innerHTML = html;
+  bubble.style.opacity = '1';
+}
+
+async function handleFileAttachment(file, context) {
+  if (context === 'rep') { await analyzeRepMeeting(file); return; }
+
+  const panelId = context === 'leader' ? 'leaderMessages' : 'execMessages';
+  const msgs = document.getElementById(panelId);
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble agent">📎 ${escHtml(file.name)} 읽는 중…</div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  const bubble = wrap.querySelector('.msg-bubble');
+
+  let content;
+  try { content = await extractFileText(file); }
+  catch(e) { bubble.innerHTML = `📎 ${escHtml(file.name)}<br><br>${escHtml(e.message)}`; return; }
+
+  if (!content || !content.trim()) {
+    bubble.innerHTML = `📎 ${escHtml(file.name)}<br><br>파일에서 텍스트를 추출하지 못했습니다. 내용이 비어 있거나 이미지 기반 파일일 수 있습니다.`;
+    return;
+  }
+  bubble.innerHTML = `📎 ${escHtml(file.name)}<br><br>파일 내용을 확인했습니다. 분석할 내용이 있으면 말씀해 주세요.`;
+}
+
+async function analyzeRepMeeting(file) {
+  if (!S.currentOpp) return;
+
+  const msgs = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.innerHTML = `<div class="agent-avatar-sm is-active"></div><div class="msg-bubble agent">📎 ${escHtml(file.name)} 읽는 중…</div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  const bubble    = wrap.querySelector('.msg-bubble');
+  const avatarSm  = wrap.querySelector('.agent-avatar-sm');
+  document.querySelectorAll('.chat-header .agent-avatar').forEach(el => el.classList.add('is-active'));
+
+  const cleanup = () => {
+    avatarSm.classList.remove('is-active');
+    document.querySelectorAll('.chat-header .agent-avatar').forEach(el => el.classList.remove('is-active'));
+  };
+
+  let content;
+  try { content = await extractFileText(file); }
+  catch(e) {
+    await fadeBubble(bubble, `📎 ${escHtml(file.name)}<br><br>${escHtml(e.message)}`);
+    cleanup(); return;
+  }
+  if (!content || !content.trim()) {
+    await fadeBubble(bubble, `📎 ${escHtml(file.name)}<br><br>파일에서 텍스트를 추출하지 못했습니다. 내용이 비어 있거나 이미지 기반 파일일 수 있습니다.`);
+    cleanup(); return;
+  }
+
+  await fadeBubble(bubble, `📎 ${escHtml(file.name)} 분석 중…`);
+
+  try {
+    const res = await fetch('/api/meeting/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({opp_id: S.currentOpp.id, meeting_text: content}),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const result = await res.json();
+
+    if (!result.summary) throw new Error('결과 없음');
+
+    // meeting/analyze 응답(code/label) → 텍스트 경로와 동일한 형식(item/direction)으로 정규화
+    const rawChanges = (result.changes || []).filter(c => (c.evidence||'').trim() || (c.rationale||'').trim());
+    const changes = rawChanges.map(c => ({
+      item: c.code,
+      from: c.from,
+      to: c.to,
+      direction: (c.to >= c.from) ? 'up' : 'down',
+      evidence: c.evidence || '',
+      reason: c.reason || '',
+      rationale: c.rationale || '',
+    }));
+
+    // 분석 요약(첨부 내용 요약)을 챗에 표시 — 근거 칩과 함께
+    const chipsHtml = changes.length > 0
+      ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(107,79,187,.12);display:flex;flex-wrap:wrap;gap:6px">
+           ${changes.map(c =>
+             `<span class="meeting-chip" title="${escHtml(c.evidence||c.reason||'')}">${escHtml(MEDDPICC_NAMES[c.item]||c.item)}(${c.item}) ${c.from}→${c.to}</span>`
+           ).join('')}
+         </div>`
+      : '';
+    await fadeBubble(bubble, result.summary.replace(/\n/g,'<br>') + chipsHtml);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    S.meetingContext = {text: content, changes};
+    document.getElementById('stageQuotaInfo').textContent = '회의록 기반 대화';
+
+    if (changes.length > 0) {
+      // ── 텍스트 경로와 동일한 '확인 후 반영' 워크플로 ──
+      // 즉시 반영하지 않고 미리보기 + 확인 버튼을 띄운다.
+      const newScores = {...(S.currentOpp.meddpicc || {})};
+      changes.forEach(c => { newScores[c.item] = c.to; });
+
+      S.evalResult = {
+        scores: newScores,
+        changes: changes,
+        preview_text: result.summary,        // 로그·미리보기 요약에 첨부 내용 요약 사용
+      };
+      S.pendingFile = {name: file.name, summary: result.summary};
+
+      showPreview(S.evalResult, `[회의록 분석] ${file.name}`);
+
+      // ── 방식 B: 확인 버튼과 함께 AI 보조 질문 1개 자동 제시 ──
+      // 반영 후에도 여전히 비어 있는(또는 약한) 항목을 짚어 추가 입력을 유도
+      const FOLLOWUP_Q = {
+        M:  '기대 효과(매출 증대·비용 절감 같은 목표 수치)를 구체적으로 들으신 게 있나요?',
+        E:  '예산 집행을 최종 결정하는 분이 누구인지 확인되셨나요?',
+        DC: '고객이 솔루션을 고를 때 가장 중요하게 보는 평가 기준을 들으셨나요?',
+        DP: '계약까지 가는 내부 결재 절차나 일정이 파악되셨나요?',
+        CO: '경쟁사나 자체 개발 검토 같은 다른 대안이 거론되고 있나요?',
+      };
+      const after = newScores;
+      const weak = ['M','E','DC','DP','CO'].find(k => (after[k]||0) <= 1 && FOLLOWUP_Q[k]);
+      if (weak) {
+        S.pendingFollowupItem = weak;
+        setTimeout(() => {
+          addMsg('agent', `위 내용은 확인 버튼으로 반영하시면 됩니다. 한 가지만 더 여쭤볼게요 — ${FOLLOWUP_Q[weak]}`);
+          S.askedCount++;
+        }, 400);
+      }
+    } else {
+      addMsg('agent', '회의록에서 점수에 반영할 새 단서를 찾지 못했습니다. 내용을 직접 입력해 주셔도 됩니다.');
+    }
+
+  } catch(e) {
+    await fadeBubble(bubble, '분석 결과를 불러오지 못했습니다. 다시 시도해 주세요.');
+  }
+
+  cleanup();
+}
+
+// ── Collapse exec top section ──
+function toggleExecTop() {
+  const section = document.getElementById('execTopSection');
+  const btn = document.getElementById('collapseBtn');
+  const isCollapsed = section.style.display === 'none';
+  section.style.display = isCollapsed ? '' : 'none';
+  btn.textContent = isCollapsed ? '접기 ▲' : '펼치기 ▼';
+}
+
+
+// ── Probability-weighted waterfall computation ──
+function computeWeightedWaterfall(opps) {
+  const DISPLAY_ORDER = ['계약완료','우선협상','Negotiated','Qualified','Validated','Identified','Lead'];
+  const IDENTIFIED_STAGES = new Set(['Identified','Identified-Remind','Identified-Registered']);
+  const data = {};
+  DISPLAY_ORDER.forEach(n => data[n] = {total:0, count:0});
+  opps.forEach(o => {
+    let displayName = IDENTIFIED_STAGES.has(o.stage) ? 'Identified' : o.stage;
+    if (!(displayName in data)) return;
+    const w = o.stage === '계약완료' ? 1.0 : (o.수주확도 || 0) / 100;
+    data[displayName].total += (o.수주목표액 || 0) * w;
+    data[displayName].count++;
+  });
+  const stages = DISPLAY_ORDER.map(name => ({name, total: Math.round(data[name].total), count: data[name].count}));
+  const weightedSum = stages.reduce((s,st) => s + st.total, 0);
+  const gapAmount = Math.max(0, 5000 - weightedSum);
+  return {stages, weightedSum, gapAmount};
+}
+
+// ── Canvas Waterfall helpers ──
+function _roundRect(ctx, x, y, w, h, r) {
+  if (h <= 0) return;
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+// ── Role Switching ──
+function switchRole(role) {
+  S.role = role;
+  document.querySelectorAll('.role-tab').forEach((t,i) => {
+    const roles = ['rep','leader','exec','admin'];
+    t.classList.toggle('active', roles[i] === role);
+  });
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${role}`).classList.add('active');
+
+  if (role === 'rep') loadRepView();
+  else if (role === 'leader') loadLeaderView();
+  else if (role === 'exec') loadExecView();
+  else if (role === 'admin') loadAdminView();
+}
+
+// ════════════════════════════════════════
+// 영업대표 뷰
+// ════════════════════════════════════════
+async function loadRepView() {
+  try {
+    const [opps, agendas] = await Promise.all([
+      api('GET', `/api/opportunities?rep=${encodeURIComponent(S.repName)}`),
+      api('GET', `/api/agenda?rep=${encodeURIComponent(S.repName)}`).catch(() => []),
+    ]);
+    S.opps = opps;
+    renderNotes(opps, agendas);
+    renderRepDealList(opps);
+  } catch(e) { console.error(e); }
+}
+
+function renderNotes(opps, agendas) {
+  const notes = [];
+  const todayDate = new Date();
+
+  // 받은 지시(아젠다)를 알림 맨 앞에 — 리더/부문장 → 영업대표 루프 완성
+  (agendas || []).forEach(a => {
+    const opp = opps.find(o => o.id === a.deal_id);
+    notes.push({
+      type: 'agenda', icon: '📌',
+      title: `${a.pushed_by || '리더'} 지시`,
+      deal: a.deal_name || (opp ? opp.사업기회명 : ''),
+      desc: a.agenda || '',
+      opp: opp || {id: a.deal_id},
+    });
+  });
+
+  opps.forEach(o => {
+    const dBid = daysTo(o.입찰일);
+    if (dBid !== null && dBid >= 0 && dBid <= 30 && o.stage !== '계약완료') {
+      notes.push({type:'danger', icon:'⚡', title:`입찰 D-${dBid}`, deal: o.사업기회명, desc:`${o.고객사명} · ${o.stage}`, opp: o});
+    }
+    if (o.최근_업데이트일) {
+      const diffDays = Math.round((todayDate - new Date(o.최근_업데이트일)) / 86400000);
+      if (diffDays > 14 && o.stage !== '계약완료') {
+        notes.push({type:'warn', icon:'📋', title:`${diffDays}일째 미업데이트`, deal: o.사업기회명, desc:`마지막 업데이트: ${o.최근_업데이트일}`, opp: o});
+      }
+    }
+    if (!o.다음_단계 && o.stage !== '계약완료' && o.stage !== 'Lead') {
+      notes.push({type:'warn', icon:'❓', title:'다음 단계 미정', deal: o.사업기회명, desc:`${o.고객사명} · ${o.stage}`, opp: o});
+    }
+    // Stage 체류 경보 — AI가 정체 딜을 선제 감지
+    if (o.stage_alert === 'danger') {
+      notes.push({type:'danger', icon:'🚨', title:`${o.stage} 정체 (체류 2배↑)`, deal: o.사업기회명, desc:`${o.stage_days||0}일 체류 · 단계 진전 필요`, opp: o});
+    } else if (o.stage_alert === 'warning') {
+      notes.push({type:'warn', icon:'⏳', title:`${o.stage} 지연 주의`, deal: o.사업기회명, desc:`${o.stage_days||0}일 체류`, opp: o});
+    }
+  });
+
+  const row = document.getElementById('notesRow');
+  document.getElementById('notesCount').textContent = notes.length ? `${notes.length}건` : '';
+  if (!notes.length) {
+    row.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">현재 액션 알림이 없습니다 ✓</div>';
+    return;
+  }
+  row.innerHTML = notes.slice(0, 8).map(n => `
+    <div class="alert-item ${n.type==='agenda'?'agenda':''}" onclick="openDeal('${n.opp.id}')">
+      <div class="alert-type ${n.type}">${n.icon||''} ${n.title}</div>
+      <div class="alert-item-deal">${n.deal}</div>
+      <div class="alert-item-desc">${n.desc}</div>
+    </div>
+  `).join('');
+}
+
+function renderRepDealList(opps) {
+  const tbody = document.getElementById('repDealList');
+  if (!opps.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">담당 딜이 없습니다</td></tr>';
+    return;
+  }
+  const sorted = [...opps].sort((a,b) => (b.score?.total||0) - (a.score?.total||0));
+
+  // ── 최적화: 초기 10개만 렌더링 ──
+  const initialCount = 10;
+  const displayOpps = sorted.slice(0, initialCount);
+
+  tbody.innerHTML = displayOpps.map(o => {
+    const score = o.score || {};
+    const dBid = daysTo(o.입찰일);
+    const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
+    const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
+    return `<tr class="deal-row" onclick="openDeal('${o.id}')" id="row-${o.id}">
+      <td>
+        <div class="deal-name">${o.사업기회명}</div>
+        <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
+      </td>
+      <td>${stageBadge(o.stage)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${scoreBarHtml(score, "static")}
+          <span class="score-num">${(score.total||0).toFixed(0)}</span>
+        </div>
+      </td>
+      <td style="font-weight:600;white-space:nowrap">${fmtAmt(o.수주목표액)}억</td>
+      <td style="color:var(--text2);font-size:12px">${o.입찰일 || '—'}</td>
+      <td style="${dStyle};font-size:12px">${dDay}</td>
+      <td>${stageAlert(o)}</td>
+    </tr>`;
+  }).join('');
+
+  // 더보기 버튼 추가
+  if (sorted.length > initialCount) {
+    const moreRow = document.createElement('tr');
+    moreRow.innerHTML = `<td colspan="7" style="text-align:center;padding:12px;background:#F5F5F3;">
+      <button onclick="showMoreRepDeals()" style="background:none;border:none;color:#6B4FBB;font-weight:600;cursor:pointer;font-size:12px;">
+        더보기 (${sorted.length - initialCount}건) ▼
+      </button>
+    </td>`;
+    tbody.appendChild(moreRow);
+    // 전체 데이터 저장
+    window._allRepDeals = sorted;
+  }
+}
+
+function showMoreRepDeals() {
+  const tbody = document.getElementById('repDealList');
+  const allDeals = window._allRepDeals || [];
+  tbody.innerHTML = allDeals.map(o => {
+    const score = o.score || {};
+    const dBid = daysTo(o.입찰일);
+    const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
+    const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
+    return `<tr class="deal-row" onclick="openDeal('${o.id}')" id="row-${o.id}">
+      <td>
+        <div class="deal-name">${o.사업기회명}</div>
+        <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
+      </td>
+      <td>${stageBadge(o.stage)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${scoreBarHtml(score, "static")}
+          <span class="score-num">${(score.total||0).toFixed(0)}</span>
+        </div>
+      </td>
+      <td style="font-weight:600;white-space:nowrap">${fmtAmt(o.수주목표액)}억</td>
+      <td style="color:var(--text2);font-size:12px">${o.입찰일 || '—'}</td>
+      <td style="${dStyle};font-size:12px">${dDay}</td>
+      <td>${stageAlert(o)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Page 2: Deal Detail ──
+async function openDeal(oppId) {
+  try {
+    const opp = await api('GET', `/api/opportunities/${oppId}`);
+    S.currentOpp = opp;
+    S.conversation = [];
+    S.evalResult = null;
+    S.pendingFile = null;
+    S.askedCount = 0;
+    S.meetingContext = null;
+
+    document.getElementById('rep-p1').style.display = 'none';
+    document.getElementById('rep-p2').style.display = 'block';
+
+    document.getElementById('p2Title').textContent = opp.사업기회명;
+
+    const tags = [];
+    if (opp.AX사업여부) tags.push('<span class="badge-ax">AX</span>');
+    if (opp.중점고객여부) tags.push('<span class="badge-key">중점고객</span>');
+    if (opp.중점사업여부) tags.push('<span class="badge-key">중점사업</span>');
+    document.getElementById('p2Tags').innerHTML = tags.join('');
+
+    renderScorePanel(opp.score, null);
+    renderDealDetail(opp);
+
+    const maxQ = STAGE_MAX_Q[opp.stage] || 0;
+    document.getElementById('stageQuotaInfo').textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화';
+
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('previewArea').style.display = 'none';
+    document.getElementById('btnUpdate').style.display = 'none';
+    document.getElementById('dealInfoSection').style.display = 'none';
+    document.getElementById('dealInfoToggleBtn').innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>';
+
+    loadActivityLog(opp.id);
+    loadCoachingNotes(opp);
+    await sendInitialGreeting(opp);
+  } catch(e) {
+    console.error(e);
+    alert('딜 로딩 실패: ' + e.message);
+  }
+}
+
+function renderScorePanel(score, oldScore) {
+  const s = score || {strategic_fit:0, deal_quality:0, activity:0, cust_history:0, rep_rate:0, total:0};
+  const total = s.total || 0;
+  const totalEl = document.getElementById('scoreTotal');
+
+  if (oldScore) {
+    const diff = total - (oldScore.total || 0);
+    const sign = diff >= 0 ? '+' : '';
+    document.getElementById('scoreChange').innerHTML = `<span style="color:${diff>=0?'var(--success)':'var(--danger)'}">↑ ${sign}${diff.toFixed(1)}점</span>`;
+    totalEl.classList.add('score-change-anim');
+    setTimeout(() => totalEl.classList.remove('score-change-anim'), 1000);
+  } else {
+    document.getElementById('scoreChange').textContent = '';
+  }
+
+  totalEl.textContent = total.toFixed(0);
+
+  // 5-Factor 값 표시
+  document.getElementById('sfVal').textContent = (s.strategic_fit ?? 0).toFixed(1);
+  document.getElementById('dqVal').textContent = (s.deal_quality  ?? 0).toFixed(1);
+  document.getElementById('acVal').textContent = (s.activity      ?? 0).toFixed(1);
+  document.getElementById('chVal').textContent = (s.cust_history  ?? 0).toFixed(1);
+  document.getElementById('rrVal').textContent = (s.rep_rate      ?? 0).toFixed(1);
+
+  // SF 상세 (중점사업/중점고객/AX)
+  const sfItems = [];
+  if (S.currentOpp?.중점사업여부) sfItems.push('중점사업 +10');
+  if (S.currentOpp?.중점고객여부) sfItems.push('중점고객 +6');
+  if (S.currentOpp?.AX사업여부)   sfItems.push('AX사업 +4');
+  document.getElementById('sfDetail').textContent = sfItems.length ? sfItems.join(' · ') : '해당 없음';
+
+  // AC 상세 (최근 30일 활동 수)
+  const log = S.currentOpp?.activity_log || [];
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
+  const recentActs = log.filter(e => new Date(e.date) >= cutoff).length;
+  document.getElementById('acDetail').textContent = `최근 30일 업데이트 ${recentActs}회`;
+
+  // CH 상세
+  document.getElementById('chDetail').textContent = '과거 계약 이력 기반';
+
+  // RR 상세
+  const wr = S.currentOpp?._rep_win_rate;
+  const cnt = S.currentOpp?._rep_deal_count ?? 0;
+  document.getElementById('rrDetail').textContent = wr != null
+    ? `${S.currentOpp?.영업대표} 승률 ${wr}% (${cnt}건)`
+    : `${S.currentOpp?.영업대표} 이력 부족 (${cnt}건) — 기본값 적용`;
+
+  // 바 차트 — 각 점수값이 곧 전체 100점 대비 비율
+  document.getElementById('axSF').style.width = (s.strategic_fit ?? 0).toFixed(1) + '%';
+  document.getElementById('axDQ').style.width = (s.deal_quality  ?? 0).toFixed(1) + '%';
+  document.getElementById('axAC').style.width = (s.activity      ?? 0).toFixed(1) + '%';
+  document.getElementById('axCH').style.width = (s.cust_history  ?? 0).toFixed(1) + '%';
+  document.getElementById('axRR').style.width = (s.rep_rate      ?? 0).toFixed(1) + '%';
+}
+
+async function sendInitialGreeting(opp) {
+  // 점수 진단형 인사말 — 빈 딜에서 무엇을 채우면 점수가 오르는지 짚어준다 (결정론적)
+  const s = opp.score || {};
+  const sf = s.strategic_fit || 0;
+  const dq = s.deal_quality || 0;
+  const total = Math.round(s.total || 0);
+
+  // MEDDIC 항목 중 비어 있는(0점) 것 추출 — 표준 순서로
+  const order = ['M','E','DC','DP','I','C','CO'];
+  const medd = opp.meddpicc || {};
+  const empty = order.filter(k => (medd[k] || 0) === 0).map(k => MEDDPICC_NAMES[k]);
+
+  // SF는 높은데 DQ가 낮은 전형적 "좋은 로고, 부실한 딜 위생" 진단
+  let diag;
+  if (sf >= 25 && dq < 15) {
+    diag = `전략 적합도(SF)는 ${sf.toFixed(0)}점으로 최상위권인데, 딜 품질(DQ)이 ${dq.toFixed(1)}점으로 거의 비어 있어요. 좋은 고객·좋은 사업인데 검증은 아직이라는 뜻이에요.`;
+  } else if (dq < 15) {
+    diag = `딜 품질(DQ)이 ${dq.toFixed(1)}점으로 아직 낮아요. 고객에 대해 확인된 정보가 부족한 상태예요.`;
+  } else {
+    diag = `현재 딜 품질(DQ)은 ${dq.toFixed(1)}점입니다. 몇 가지만 더 확인하면 점수를 올릴 수 있어요.`;
+  }
+
+  // 마지막 항목 받침 여부로 조사(이/가) 결정
+  const emptyLine = empty.length > 0
+    ? `특히 ${empty.slice(0,4).join(' · ')}${empty.length>4?' 등' : ''}${josaIGa(empty.length>4 ? '등' : empty[Math.min(3,empty.length-1)])} 아직 비어 있어요. `
+    : '';
+
+  const greet =
+    `${opp.고객사명} "${opp.사업기회명}" 딜을 보고 있어요. 현재 Deal Score는 ${total}점입니다.\n\n` +
+    `${diag}\n\n` +
+    `${emptyLine}최근 고객과 나눈 대화나 회의록을 넣어 주시면, 어디서 점수를 올릴 수 있는지 바로 짚어드릴게요.`;
+
+  addMsg('agent', greet);
+  S.conversation.push({role:'agent', text: greet});
+}
+
+function backToP1() {
+  document.getElementById('rep-p1').style.display = 'block';
+  document.getElementById('rep-p2').style.display = 'none';
+  S.currentOpp = null;
+  S.conversation = [];
+}
+
+function onChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || !S.currentOpp) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('btnSend').disabled = true;
+
+  addMsg('user', msg);
+  S.conversation.push({role:'rep', text: msg});
+  showTyping();
+
+  try {
+    if (S.meetingContext) {
+      const res = await fetch('/api/meeting/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({opp_id: S.currentOpp.id, meeting_text: S.meetingContext.text, question: msg}),
+      });
+      removeTyping();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reply) {
+          addMsg('agent', data.reply);
+          S.conversation.push({role:'agent', text: data.reply});
+        }
+      } else {
+        addMsg('agent', '답변 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      }
+
+      // ── 방식 B: 후속 답변도 점수에 반영 ──
+      // 영업대표의 자연어 답변을 재평가해 변동분을 미리보기에 누적
+      try {
+        const reEval = await api('POST', '/api/meddpicc/evaluate',
+          {opp_id: S.currentOpp.id, input_text: msg});
+        const newChanges = (reEval.changes || []).filter(c => (c.evidence||'').trim() || (c.reason||'').trim());
+        if (newChanges.length > 0) {
+          // 기존 미리보기(S.evalResult)에 누적
+          const base = S.evalResult ? {...S.evalResult.scores} : {...(S.currentOpp.meddpicc||{})};
+          const mergedChanges = (S.evalResult?.changes || []).slice();
+          newChanges.forEach(c => {
+            if (c.to > (base[c.item]||0)) {
+              base[c.item] = c.to;
+              // 같은 항목이 이미 있으면 to만 갱신, 없으면 추가
+              const ex = mergedChanges.find(x => x.item === c.item);
+              if (ex) { ex.to = c.to; ex.evidence = c.evidence || ex.evidence; }
+              else mergedChanges.push(c);
+            }
+          });
+          S.evalResult = {
+            scores: base,
+            changes: mergedChanges,
+            preview_text: S.evalResult?.preview_text || '',
+          };
+          showPreview(S.evalResult, S.pendingFile ? `[회의록 분석] ${S.pendingFile.name}` : msg);
+          addMsg('agent', '말씀해 주신 내용을 반영해 점수를 다시 추렸습니다. 확인 후 업데이트해 주세요.');
+        }
+      } catch(e) { /* 재평가 실패 시 답변만 유지 */ }
+    } else if (msg.length > 30) {
+      await evaluateAndChat(msg);
+    } else {
+      const res = await api('POST', '/api/chat', {
+        opp_id: S.currentOpp.id,
+        message: msg,
+        conversation: S.conversation,
+      });
+      removeTyping();
+      if (res.reply) {
+        addMsg('agent', res.reply);
+        S.conversation.push({role:'agent', text: res.reply});
+        if (res.reply.includes('?') || res.reply.includes('？')) S.askedCount++;
+      }
+    }
+  } catch(e) {
+    removeTyping();
+    addMsg('agent', '죄송합니다. 잠시 후 다시 시도해주세요.');
+  }
+
+  document.getElementById('btnSend').disabled = false;
+}
+
+async function evaluateAndChat(inputText) {
+  try {
+    const [evalRes, chatRes] = await Promise.all([
+      api('POST', '/api/meddpicc/evaluate', {opp_id: S.currentOpp.id, input_text: inputText}),
+      api('POST', '/api/chat', {opp_id: S.currentOpp.id, message: inputText, conversation: S.conversation}),
+    ]);
+
+    removeTyping();
+    S.evalResult = evalRes;
+    S.pendingFile = null;  // 텍스트 입력 경로 — 파일 분기 비활성화
+
+    if (chatRes.reply) {
+      addMsg('agent', chatRes.reply);
+      S.conversation.push({role:'agent', text: chatRes.reply});
+      if (chatRes.reply.includes('?') || chatRes.reply.includes('？')) S.askedCount++;
+    }
+
+    const changes = evalRes.changes || [];
+    if (changes.length > 0) showPreview(evalRes, inputText);
+
+    const maxQ = STAGE_MAX_Q[S.currentOpp.stage] || 0;
+    const ambiguities = (evalRes.ambiguities || []).filter(a => a.is_stage_required);
+    if (S.askedCount < maxQ && ambiguities.length > 0) {
+      const q = ambiguities[0];
+      setTimeout(() => {
+        addMsg('agent', q.question);
+        S.conversation.push({role:'agent', text: q.question});
+        S.askedCount++;
+      }, 800);
+    }
+  } catch(e) {
+    removeTyping();
+    addMsg('agent', '평가 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }
+}
+
+function toggleActivityLog() {
+  const body = document.getElementById('activityLogBody');
+  const caret = document.getElementById('activityLogCaret');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  caret.textContent = open ? '▼' : '▶';
+}
+
+function fmtLogTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth()+1}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function loadActivityLog(oppId) {
+  const panel = document.getElementById('activityLog');
+  const body = document.getElementById('activityLogBody');
+  const countEl = document.getElementById('activityLogCount');
+  if (!panel) return;
+  try {
+    const res = await fetch(`/api/meeting/log/${oppId}`);
+    if (!res.ok) throw new Error('log fetch failed');
+    const data = await res.json();
+    const items = data.items || [];
+    if (!items.length) { panel.style.display = 'none'; return; }
+
+    panel.style.display = 'block';
+    countEl.textContent = `${items.length}건`;
+    body.innerHTML = items.map(it => {
+      const icon = it.source === 'file' ? '📎' : '📝';
+      const title = it.source === 'file'
+        ? escHtml(it.filename || '첨부 파일')
+        : '직접 입력';
+      const preview = it.source === 'file'
+        ? escHtml(it.summary || '')
+        : escHtml(it.preview || '');
+      const chips = (it.changes || []).map(c =>
+        `<span class="activity-chip">${escHtml(c.name)}(${c.code}) ${c.from}→${c.to}</span>`
+      ).join('');
+      return `<div class="activity-item">
+        <div class="activity-item-head">
+          <span>${icon}</span><strong>${title}</strong>
+          <span class="activity-item-time">${fmtLogTime(it.timestamp)}</span>
+        </div>
+        ${preview ? `<div class="activity-item-preview">${preview}</div>` : ''}
+        ${chips ? `<div class="activity-item-chips">${chips}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    panel.style.display = 'none';
+  }
+}
+
+function loadCoachingNotes(opp) {
+  const section = document.getElementById('coachingNotesSection');
+  const notesList = document.getElementById('coachingNotesList');
+  if (!section || !notesList) return;
+
+  const notes = opp.coaching_notes || [];
+  if (!notes || notes.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  notesList.innerHTML = notes.map(note => {
+    const noteDate = new Date(note.timestamp).toLocaleDateString('ko-KR', {
+      month: 'short',
+      day: 'numeric'
+    });
+    const noteTime = new Date(note.timestamp).toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `<div style="background:white;border-left:3px solid #6B4FBB;padding:8px;margin-bottom:8px;font-size:12px;border-radius:4px;">
+      <div style="color:#666;margin-bottom:4px;font-size:11px;">
+        <strong>${escHtml(note.author || '리더')}</strong> · ${noteDate} ${noteTime}
+      </div>
+      <div style="color:#333;line-height:1.5;white-space:pre-wrap;word-break:break-word;">${escHtml(note.content)}</div>
+    </div>`;
+  }).join('');
+}
+
+
+function showPreview(evalResult, inputText) {
+  const changes = evalResult.changes || [];
+  if (!changes.length) return;
+
+  const previewArea = document.getElementById('previewArea');
+  const previewText = evalResult.preview_text || '';
+  const items = changes.map(c => {
+    const dir = c.direction === 'up' ? '🔺' : '🔻';
+    const cls = c.direction === 'up' ? 'preview-up' : 'preview-down';
+    const name = MEDDPICC_NAMES[c.item] || c.item;
+    // 근거: evidence(원문 인용) → reason(LLM 근거) → rationale 순으로 우선
+    const basis = (c.evidence || '').trim() || (c.reason || '').trim() || (c.rationale || '').trim();
+    const basisHtml = basis
+      ? `<div style="font-size:11px;color:var(--text2);margin:2px 0 0 22px;line-height:1.5">└ 근거: ${escHtml(basis)}</div>`
+      : '';
+    return `<div class="preview-item"><span class="${cls}">${dir}</span><span><strong>${name}</strong> ${c.from}점 → ${c.to}점</span></div>${basisHtml}`;
+  }).join('');
+
+  previewArea.innerHTML = `
+    <div class="preview-card">
+      <div class="preview-title">📋 오늘 확인된 내용</div>
+      ${previewText ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${previewText}</div>` : ''}
+      ${items}
+    </div>
+  `;
+  previewArea.style.display = 'block';
+  document.getElementById('btnUpdate').style.display = 'block';
+}
+
+async function doUpdate() {
+  if (!S.evalResult || !S.currentOpp) return;
+  const btn = document.getElementById('btnUpdate');
+  btn.disabled = true;
+  btn.textContent = '업데이트 중...';
+
+  try {
+    const oldScore = S.currentOpp.score;
+    // 파일 첨부 확정이면 파일명을, 아니면 대화 텍스트를 input_text로 사용
+    const inputText = S.pendingFile
+      ? `[회의록 분석] ${S.pendingFile.name}`
+      : S.conversation.filter(t=>t.role==='rep').map(t=>t.text).join('\n');
+    const res = await api('POST', '/api/meddpicc/update', {
+      opp_id: S.currentOpp.id,
+      scores: S.evalResult.scores,
+      llm_scores: S.evalResult.scores,
+      input_text: inputText,
+      preview_text: S.evalResult.preview_text || '',
+    });
+
+    if (res.success) {
+      S.currentOpp.meddpicc = S.evalResult.scores;
+      S.currentOpp.score = res.score;
+      renderScorePanel(res.score, oldScore);
+      renderDealDetail(S.currentOpp);
+      document.getElementById('previewArea').style.display = 'none';
+      btn.style.display = 'none';
+      addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점.`);
+      S.evalResult = null;
+      S.pendingFile = null;
+      loadActivityLog(S.currentOpp.id);
+    }
+  } catch(e) {
+    addMsg('agent', '업데이트 중 오류가 발생했습니다.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✓ 오늘 내용 업데이트 하기';
+}
+
+function openNewDealModal() {
+  // 데모 범위 외 — 로드맵 안내 (시연 중 사고 방지)
+  showToast('신규 딜 등록은 다음 단계 로드맵입니다 (자연어 → 자동 구조화 → 저장)');
+}
+
+// ════════════════════════════════════════
+// 영업리더 뷰
+// ════════════════════════════════════════
+async function loadLeaderView() {
+  try {
+    const [pipeline, opps] = await Promise.all([
+      api('GET', `/api/pipeline?dept=${encodeURIComponent(S.repDept)}`),
+      api('GET', `/api/opportunities?dept=${encodeURIComponent(S.repDept)}`),
+    ]);
+
+    S.leaderOpps = opps;
+    const total = opps.reduce((s,o)=>s+o.수주목표액,0);
+    const avg = pipeline.team_avg_score ?? 0;
+    const urgent = opps.filter(o=>{const d=daysTo(o.입찰일);return d!==null&&d>=0&&d<=30}).length;
+
+    document.getElementById('lkpi-count').textContent = opps.length;
+    document.getElementById('lkpi-amt').textContent = fmtAmt(total);
+    document.getElementById('lkpi-score').textContent = avg;
+    document.getElementById('lkpi-urgent').textContent = urgent;
+
+    const repList = document.getElementById('leaderRepList');
+    const sortedReps = (pipeline.rep_summary || []).sort((a,b)=>b.avg_score-a.avg_score);
+
+    // ── Lazy Loading: 초기 10개만 렌더링 ──
+    const initialCount = 10;
+    repList.innerHTML = sortedReps.slice(0, initialCount).map(r => {
+      const alert = r.score_alert ? '🔴' : '';
+      return `<tr>
+        <td><strong>${r.name}</strong> ${alert}</td>
+        <td>${r.deal_count}</td>
+        <td>${fmtAmt(r.total_amount)}억</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="score-bar" style="width:80px"><div class="bar-sf" style="width:${r.avg_score}%"></div></div>
+            <span style="font-size:12px;font-weight:600">${r.avg_score}</span>
+          </div>
+        </td>
+        <td>${r.score_alert?'<span style="color:var(--danger);font-size:11px;font-weight:600">팀 평균 -15점 이하</span>':'<span style="color:var(--success);font-size:11px">정상</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    // 더보기 버튼 (전체 개수가 초기값보다 많으면)
+    if (sortedReps.length > initialCount) {
+      const moreBtn = document.createElement('tr');
+      moreBtn.innerHTML = `<td colspan="5" style="text-align:center;padding:12px;background:#F5F5F3;">
+        <button onclick="showMoreReps()" style="background:none;border:none;color:#6B4FBB;font-weight:600;cursor:pointer;font-size:12px;">
+          더보기 (${sortedReps.length - initialCount}명) ▼
+        </button>
+      </td>`;
+      repList.appendChild(moreBtn);
+      // 전체 데이터 저장 (더보기 클릭 시 사용)
+      window._allRepsData = sortedReps;
+    }
+
+    const urgentOpps = opps.filter(o=>{const d=daysTo(o.입찰일);return d!==null&&d>=0&&d<=30})
+      .sort((a,b)=>daysTo(a.입찰일)-daysTo(b.입찰일));
+
+    // ── Lazy Loading: 초기 5개만 렌더링 ──
+    const urgentListEl = document.getElementById('leaderUrgentList');
+    const urgentInitialCount = 5;
+    urgentListEl.innerHTML = urgentOpps.slice(0, urgentInitialCount).map(o => {
+      const d = daysTo(o.입찰일);
+      return `<tr class="deal-row" onclick="goToDeal('${o.id}', false)">
+        <td><div class="deal-name">${o.사업기회명}</div><div class="deal-client">${o.고객사명}</div></td>
+        <td>${o.영업대표}</td>
+        <td>${stageBadge(o.stage)}</td>
+        <td>${fmtAmt(o.수주목표액)}억</td>
+        <td style="font-size:12px">${o.입찰일}</td>
+        <td style="font-weight:700;color:var(--danger)">D-${d}</td>
+        <td><button class="lb-memo-btn" onclick="event.stopPropagation(); openCoachingNoteModal('${escHtml(o.id||'')}','${escHtml(o.사업기회명||'')}')">📝 메모</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="empty-state">입찰 임박 딜 없음</td></tr>';
+
+    // 더보기 버튼
+    if (urgentOpps.length > urgentInitialCount) {
+      const moreBtn = document.createElement('tr');
+      moreBtn.innerHTML = `<td colspan="7" style="text-align:center;padding:12px;background:#F5F5F3;">
+        <button onclick="showMoreUrgent()" style="background:none;border:none;color:#6B4FBB;font-weight:600;cursor:pointer;font-size:12px;">
+          더보기 (${urgentOpps.length - urgentInitialCount}건) ▼
+        </button>
+      </td>`;
+      urgentListEl.appendChild(moreBtn);
+      window._allUrgentData = urgentOpps;
+    }
+
+    loadLeaderBriefing();
+  } catch(e) { console.error(e); }
+}
+
+async function loadLeaderBriefing() {
+  const panel = document.getElementById('leaderMessages');
+  if (panel) panel.innerHTML = '';
+  showTypingInPanel('leaderMessages');
+  try {
+    const res = await api('POST', '/api/briefing', {role:'leader', dept: S.repDept});
+    removeTypingInPanel('leaderMessages');
+    renderLeaderBriefingCard(res);
+  } catch(e) {
+    removeTypingInPanel('leaderMessages');
+    addMsgToPanel('leaderMessages', 'agent', '팀 브리핑을 불러오는 중 오류가 발생했습니다.');
+  }
+}
+
+// ── 더보기 버튼 처리 ──
+function showAllDealsModal() {
+  const opps = S.leaderOpps || [];
+  if (!opps.length) return;
+
+  // 담당자 필터 옵션 구성
+  const repSel = document.getElementById('allDealsRepFilter');
+  const reps = [...new Set(opps.map(o => o.영업대표).filter(Boolean))].sort();
+  repSel.innerHTML = '<option value="">전체 담당자</option>' +
+    reps.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
+
+  // 필터 초기화
+  document.getElementById('allDealsStageFilter').value = '';
+  repSel.value = '';
+
+  renderAllDealsTable(opps);
+
+  const modal = document.getElementById('allDealsModal');
+  modal.style.display = 'flex';
+}
+
+function filterAllDeals() {
+  const opps = S.leaderOpps || [];
+  const stage = document.getElementById('allDealsStageFilter').value;
+  const rep   = document.getElementById('allDealsRepFilter').value;
+  const filtered = opps.filter(o =>
+    (!stage || o.stage === stage) && (!rep || o.영업대표 === rep)
+  );
+  renderAllDealsTable(filtered);
+}
+
+function renderAllDealsTable(opps) {
+  const tbody = document.getElementById('allDealsList');
+  const subtitle = document.getElementById('allDealsSubtitle');
+  const totalAmt = opps.reduce((s, o) => s + (o.수주목표액 || 0), 0);
+  subtitle.textContent = `${opps.length}건 · 총 ${fmtAmt(totalAmt)}억원`;
+
+  tbody.innerHTML = opps.length ? opps
+    .sort((a, b) => (b.score?.total || 0) - (a.score?.total || 0))
+    .map(o => {
+      const score = o.score?.total ?? 0;
+      const d = daysTo(o.입찰일);
+      const dday = d === null ? '—' : d < 0 ? '마감' : `D-${d}`;
+      const ddayCls = (d !== null && d >= 0 && d <= 7) ? 'color:var(--danger);font-weight:700' : '';
+      return `<tr class="deal-row" onclick="closeAllDealsModal();goToDeal('${o.id}',false)" style="cursor:pointer">
+        <td><div class="deal-name">${escHtml(o.사업기회명)}</div></td>
+        <td><div class="deal-client">${escHtml(o.고객사명)}</div></td>
+        <td style="font-size:12px">${escHtml(o.영업대표 || '—')}</td>
+        <td>${stageBadge(o.stage)}</td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar static" style="width:72px">
+              <div class="bar-sf" style="width:${Math.min(score, 33.3) / 33.3 * 100}%"></div>
+              <div class="bar-dq" style="width:${Math.min(Math.max(score - 33.3, 0), 33.3) / 33.3 * 100}%"></div>
+              <div class="bar-wp" style="width:${Math.min(Math.max(score - 66.6, 0), 33.4) / 33.4 * 100}%"></div>
+            </div>
+            <span class="score-num">${Math.round(score)}</span>
+          </div>
+        </td>
+        <td style="font-size:13px;font-weight:600">${fmtAmt(o.수주목표액)}억</td>
+        <td style="font-size:12px;color:var(--text2)">${o.입찰일 || '—'}</td>
+        <td style="font-size:12px;${ddayCls}">${dday}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="8" class="empty-state">해당 조건의 딜이 없습니다.</td></tr>';
+}
+
+function closeAllDealsModal() {
+  document.getElementById('allDealsModal').style.display = 'none';
+}
+
+function showMoreReps() {
+  const repList = document.getElementById('leaderRepList');
+  const allReps = window._allRepsData || [];
+  repList.innerHTML = allReps.map(r => {
+    const alert = r.score_alert ? '🔴' : '';
+    return `<tr>
+      <td><strong>${r.name}</strong> ${alert}</td>
+      <td>${r.deal_count}</td>
+      <td>${fmtAmt(r.total_amount)}억</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="score-bar" style="width:80px"><div class="bar-sf" style="width:${r.avg_score}%"></div></div>
+          <span style="font-size:12px;font-weight:600">${r.avg_score}</span>
+        </div>
+      </td>
+      <td>${r.score_alert?'<span style="color:var(--danger);font-size:11px;font-weight:600">팀 평균 -15점 이하</span>':'<span style="color:var(--success);font-size:11px">정상</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function showMoreUrgent() {
+  const urgentListEl = document.getElementById('leaderUrgentList');
+  const allUrgent = window._allUrgentData || [];
+  urgentListEl.innerHTML = allUrgent.map(o => {
+    const d = daysTo(o.입찰일);
+    return `<tr class="deal-row" onclick="goToDeal('${o.id}', false)">
+      <td><div class="deal-name">${o.사업기회명}</div><div class="deal-client">${o.고객사명}</div></td>
+      <td>${o.영업대표}</td>
+      <td>${stageBadge(o.stage)}</td>
+      <td>${fmtAmt(o.수주목표액)}억</td>
+      <td style="font-size:12px">${o.입찰일}</td>
+      <td style="font-weight:700;color:var(--danger)">D-${d}</td>
+      <td><button class="lb-memo-btn" onclick="event.stopPropagation(); openCoachingNoteModal('${escHtml(o.id||'')}','${escHtml(o.사업기회명||'')}')">📝 메모</button></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function renderLeaderBriefingCard(res, showActions, panelId) {
+  if (showActions === undefined) showActions = true;
+  const risky  = res.risky_deals  || [];
+  const urgent = res.urgent_deals || [];
+  const gap    = res.gap || {};
+  S.leaderBriefing = {risky, urgent, gap};  // 액션 구체화에서 재사용
+
+  const scoreOf = (o) => (o._score && o._score.total != null) ? o._score.total : (o.score && o.score.total) || '—';
+
+  // 위험 딜 표
+  const riskRows = risky.map(o => `
+    <tr>
+      <td>${escHtml(o.사업기회명 || '')}</td>
+      <td>${escHtml(o.영업대표 || '—')}</td>
+      <td><span class="lb-score">${scoreOf(o)}</span></td>
+      <td><span class="lb-stage">${escHtml(o.stage || '')}</span></td>
+    </tr>`).join('');
+  const riskSection = risky.length ? `
+    <div class="lb-section">
+      <div class="lb-section-title"><span class="lb-dot risk"></span>위험 딜 ${risky.length}건 — 단계 진전 필요</div>
+      <table class="lb-table">
+        <tr><th>딜</th><th>담당</th><th>Score</th><th>단계</th></tr>
+        ${riskRows}
+      </table>
+    </div>` : '';
+
+  // 입찰 임박
+  const bidRows = urgent.map(o => {
+    const d = o._days_to_bid;
+    const cls = (d != null && d <= 4) ? 'urgent' : 'soon';
+    const dtxt = (d != null) ? `D-${d}` : 'D-?';
+    return `<div class="lb-bid-row"><span class="lb-dday ${cls}">${dtxt}</span>
+      <span>${escHtml(o.사업기회명 || '')} <span style="color:var(--text3)">· ${escHtml(o.영업대표 || '—')}</span></span></div>`;
+  }).join('');
+  const bidSection = urgent.length ? `
+    <div class="lb-section">
+      <div class="lb-section-title"><span class="lb-dot bid"></span>이번 주 입찰 임박 ${urgent.length}건</div>
+      ${bidRows}
+    </div>` : '';
+
+  // 권고 액션 — 버튼으로 (클릭 시 구체화)
+  const actSection = `
+    <div class="lb-section">
+      <div class="lb-section-title"><span class="lb-dot act"></span>오늘 권고 액션</div>
+      <button class="lb-action-btn" onclick="elaborateAction('coaching')">
+        <span class="lb-action-num">①</span>
+        <span class="lb-action-label">위험 딜 ${risky.length}건 담당자 1:1 코칭 일정 수립</span>
+        <span class="lb-action-arrow">▸</span>
+      </button>
+      <button class="lb-action-btn" onclick="elaborateAction('winplan')">
+        <span class="lb-action-num">②</span>
+        <span class="lb-action-label">입찰 임박 딜 Win Plan 긴급 점검</span>
+        <span class="lb-action-arrow">▸</span>
+      </button>
+    </div>`;
+
+  // 헤드라인 + Gap
+  const total = risky.length + urgent.length;
+  const rate = (gap.achievement_rate != null) ? `달성률 ${gap.achievement_rate}%` : '';
+  const gapTxt = (gap.gap != null) ? `수주 Gap ${Number(gap.gap).toLocaleString()}억` : '';
+  const subline = [rate, gapTxt].filter(Boolean).join(' · ');
+
+  const cardHtml = `
+    <div class="lb-card">
+      <div class="lb-headline">⚠️ 오늘 챙길 딜 <span class="lb-count">${total}건</span></div>
+      ${subline ? `<div class="lb-sub">${subline}</div>` : ''}
+      ${riskSection}
+      ${bidSection}
+      ${showActions ? actSection : ''}
+    </div>`;
+
+  const msgs = document.getElementById(panelId || 'leaderMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble agent" style="max-width:560px">${cardHtml}</div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── 권고 액션 구체화 ──
+function _emptyMeddicNames(o) {
+  const order = ['M','E','DC','DP','I','C','CO'];
+  const m = o.meddpicc || {};
+  return order.filter(k => (m[k]||0) === 0).map(k => MEDDPICC_NAMES[k]);
+}
+
+function _coachingPoint(o) {
+  // 딜의 stage·score·빈 항목 기반 결정론적 코칭 포인트
+  const stage = o.stage || '';
+  const empty = _emptyMeddicNames(o);
+  if (stage === 'Lead' || stage === 'Identified') {
+    const lead = empty.length ? `${empty.slice(0,2).join(' · ')} 확인` : '핵심 정보 확인';
+    return `스코어 대비 단계가 초기입니다. 의사결정자 접점부터 확보하고, 다음 미팅에서 ${lead}${josaEulReul(lead)} 우선하세요.`;
+  }
+  if (empty.length) {
+    const items = empty.slice(0,2).join(' · ');
+    return `${items}${josaIGa(items)} 비어 있습니다. 이 항목을 채워 다음 단계 진입을 노리세요.`;
+  }
+  return `주요 항목은 확인됐습니다. 경쟁 차별화와 클로징 일정을 점검하세요.`;
+}
+
+function _winPlanPoint(o) {
+  const d = o._days_to_bid;
+  const empty = _emptyMeddicNames(o);
+  const dtxt = (d != null) ? `D-${d}` : '입찰 임박';
+  if (d != null && d <= 4) {
+    return `${dtxt} — 제안서 최종본과 의사결정자 최종 컨택을 오늘 안에 확인하세요.`;
+  }
+  const focus = empty.includes('평가 기준') ? '평가 기준 대비 제안 강점 정리' :
+                empty.includes('결정 절차') ? '결정 절차·승인 라인 확인' : '제안서 완성도 점검';
+  return `${dtxt} — ${focus}${josaIGa(focus)} 필요합니다.`;
+}
+
+function elaborateAction(kind) {
+  const b = S.leaderBriefing || {};
+  const risky = b.risky || [];
+  const urgent = b.urgent || [];
+  let html = '';
+
+  if (kind === 'coaching') {
+    if (!risky.length) { addMsgToPanel('leaderMessages','agent','현재 코칭이 시급한 위험 딜이 없습니다.'); return; }
+    const rows = risky.map(o => `
+      <div class="lb-elab-item">
+        <div class="lb-elab-head">▸ ${escHtml(o.사업기회명||'')} <span class="lb-elab-meta">${escHtml(o.영업대표||'—')} · Score ${(o._score&&o._score.total)??'—'} · ${escHtml(o.stage||'')}</span></div>
+        <div class="lb-elab-body">${escHtml(_coachingPoint(o))}</div>
+        <button class="lb-go-btn" onclick="openCoachingNoteModal('${escHtml(o.id||'')}', '${escHtml(o.사업기회명||'')}')">📝 코칭 메모 남기기 ▸</button>
+      </div>`).join('');
+    html = `<div class="lb-elab"><div class="lb-elab-title">위험 딜 ${risky.length}건 코칭 포인트</div>${rows}</div>`;
+  } else if (kind === 'winplan') {
+    if (!urgent.length) { addMsgToPanel('leaderMessages','agent','이번 주 입찰 임박 딜이 없습니다.'); return; }
+    const rows = urgent.map(o => `
+      <div class="lb-elab-item">
+        <div class="lb-elab-head">▸ ${escHtml(o.사업기회명||'')} <span class="lb-elab-meta">${escHtml(o.영업대표||'—')}${o._days_to_bid!=null?` · D-${o._days_to_bid}`:''}</span></div>
+        <div class="lb-elab-body">${escHtml(_winPlanPoint(o))}</div>
+        <button class="lb-go-btn" onclick="goToDeal('${escHtml(o.id||'')}', true)">이 딜 열어 점검 메모 남기기 ▸</button>
+      </div>`).join('');
+    html = `<div class="lb-elab"><div class="lb-elab-title">입찰 임박 ${urgent.length}건 Win Plan 점검</div>${rows}</div>`;
+  }
+
+  const msgs = document.getElementById('leaderMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble agent" style="max-width:560px">${html}</div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// 딜 상세로 이동 (+ 메모 입력 포커스)
+async function goToDeal(oppId, focusMemo) {
+  if (!oppId) return;
+  // 영업대표 뷰 활성화 (loadRepView를 거치지 않고 직접 — 목록이 상세를 덮어쓰지 않도록)
+  S.role = 'rep';
+  document.querySelectorAll('.role-tab').forEach((t,i) => {
+    const roles = ['rep','leader','exec','admin'];
+    t.classList.toggle('active', roles[i] === 'rep');
+  });
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-rep').classList.add('active');
+
+  await openDeal(oppId);             // 해당 딜 상세 열기
+  if (focusMemo) {
+    setTimeout(() => {
+      const input = document.getElementById('chatInput');
+      if (input) { input.focus(); input.scrollIntoView({behavior:'smooth', block:'center'}); }
+    }, 300);
+  }
+}
+
+function onLeaderChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLeaderQuery(); }
+}
+
+// ── 코칭 메모 모달 함수 ──
+function openCoachingNoteModal(oppId, dealName) {
+  document.getElementById('coachingNoteOppId').value = oppId;
+  document.getElementById('coachingNoteInput').value = '';
+  document.getElementById('coachingNoteInput').focus();
+  document.getElementById('coachingNoteModal').classList.add('open');
+}
+
+function closeCoachingNoteModal() {
+  document.getElementById('coachingNoteModal').classList.remove('open');
+}
+
+async function saveCoachingNote() {
+  const oppId = document.getElementById('coachingNoteOppId').value;
+  const content = document.getElementById('coachingNoteInput').value.trim();
+
+  if (!content) {
+    alert('메모 내용을 입력해주세요.');
+    return;
+  }
+
+  try {
+    const res = await api('POST', '/api/coaching-notes', {
+      opp_id: oppId,
+      content: content,
+      author: S.repName || '영업리더',
+      role: S.role || 'leader'
+    });
+
+    addMsgToPanel('leaderMessages', 'agent', '✓ 코칭 메모가 저장되었습니다.');
+    closeCoachingNoteModal();
+  } catch(e) {
+    console.error(e);
+    alert('메모 저장 중 오류가 발생했습니다.');
+  }
+}
+
+// 코칭 메모 모달 외부 클릭으로 닫기
+document.getElementById('coachingNoteModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'coachingNoteModal') {
+    closeCoachingNoteModal();
+  }
+});
+
+async function sendLeaderQuery() {
+  const input = document.getElementById('leaderQuery');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  input.style.height = 'auto';
+  addMsgToPanel('leaderMessages', 'user', q);
+  showTypingInPanel('leaderMessages');
+  try {
+    const res = await api('POST', '/api/briefing', {role:'leader', dept: S.repDept, query: q});
+    removeTypingInPanel('leaderMessages');
+    addMsgToPanel('leaderMessages', 'agent', res.briefing || '—');
+  } catch(e) {
+    removeTypingInPanel('leaderMessages');
+    addMsgToPanel('leaderMessages', 'agent', '오류가 발생했습니다. 다시 시도해 주세요.');
+  }
+}
+
+// ════════════════════════════════════════
+// 사업부문장 뷰
+// ════════════════════════════════════════
+let allExecOpps = [];
+
+async function loadExecView() {
+  try {
+    const [pipeline, opps] = await Promise.all([
+      api('GET', '/api/pipeline'),
+      api('GET', '/api/opportunities'),
+    ]);
+    allExecOpps = opps;
+    S.execOpps = opps;
+
+    const gap = pipeline.gap;
+    const total = opps.reduce((s,o)=>s+o.수주목표액,0);
+    const avg = pipeline.team_avg_score ?? 0;
+
+    document.getElementById('ekpi-amt').textContent = fmtAmt(total);
+    document.getElementById('ekpi-count').textContent = opps.length;
+    document.getElementById('ekpi-score').textContent = avg;
+    document.getElementById('ekpi-gap').textContent = fmtAmt(gap.gap);
+
+    const { stages, gapAmount } = computeWeightedWaterfall(opps);
+    renderWaterfall(stages, gapAmount);
+    // 초기 Focus딜 탭 활성
+    execFilter('focus', document.querySelector('#execFilterTabs .ftab'));
+    loadExecBriefing();
+  } catch(e) { console.error(e); }
+}
+
+// ── Canvas Waterfall — cumulative stacked horizontal bar ──
+function renderWaterfall(stages, gapAmount) {
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('wfCanvas');
+    if (!canvas) return;
+    const W = canvas.offsetWidth || canvas.parentElement?.clientWidth || 800;
+    if (!W) return;
+    const dpr = window.devicePixelRatio || 1;
+    const H = 140;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const TARGET = 5000;
+
+    // Build cumulative segments
+    const visStages = (stages || []).filter(s => s.total > 0 || s.count > 0);
+    let cum = 0;
+    const segs = visStages.map(s => {
+      const seg = { name: s.name, value: s.total, count: s.count, x0: cum };
+      cum += s.total;
+      seg.x1 = cum;
+      return seg;
+    });
+    if (gapAmount > 0) segs.push({ name: 'Gap', value: gapAmount, count: 0, x0: cum, x1: cum + gapAmount });
+    if (!segs.length) return;
+
+    const maxVal = Math.max(TARGET, cum + gapAmount) * 1.04;
+    const PAD_L = 4, PAD_R = 4;
+    const SCALE_H = 28;
+    const BAR_Y = SCALE_H;
+    const BAR_H = 72;
+    const CW = W - PAD_L - PAD_R;
+    function xs(v) { return PAD_L + (v / maxVal) * CW; }
+
+    const COLORS = {
+      '계약완료':'#4C1D95','우선협상':'#5B21B6','Negotiated':'#6D28D9',
+      'Qualified':'#7C3AED','Validated':'#8B5CF6','Identified':'#A78BFA','Lead':'#C4B5FD'
+    };
+    const SHORT = {
+      '계약완료':'계약','우선협상':'우선','Negotiated':'Nego',
+      'Qualified':'Qual','Validated':'Valid','Identified':'Iden','Lead':'Lead'
+    };
+
+    // ── 1. Scale ticks ──
+    ctx.setLineDash([]);
+    [0, 1000, 2000, 3000, 4000, 5000].forEach(v => {
+      const x = xs(v);
+      ctx.fillStyle = '#BBBBBB';
+      ctx.font = '9px -apple-system,sans-serif';
+      ctx.textAlign = v === 0 ? 'left' : 'center';
+      ctx.fillText(v === 0 ? '0' : fmtAmt(v) + '억', v === 0 ? PAD_L : x, 11);
+      ctx.strokeStyle = '#EBEBEB'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, 15); ctx.lineTo(x, BAR_Y + BAR_H); ctx.stroke();
+    });
+
+    // ── 2. Draw segments ──
+    segs.forEach((seg, i) => {
+      const sx = xs(seg.x0), ex = xs(seg.x1);
+      const bw = Math.max(ex - sx, 1);
+
+      if (seg.name === 'Gap') {
+        ctx.fillStyle = 'rgba(254,243,199,0.92)';
+        ctx.fillRect(sx, BAR_Y, bw, BAR_H);
+        ctx.save();
+        ctx.strokeStyle = '#F59E0B'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+        ctx.strokeRect(sx + 0.75, BAR_Y + 0.75, bw - 1.5, BAR_H - 1.5);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = COLORS[seg.name] || '#A78BFA';
+        ctx.fillRect(sx, BAR_Y, bw, BAR_H);
+        if (i > 0) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(sx, BAR_Y); ctx.lineTo(sx, BAR_Y + BAR_H); ctx.stroke();
+        }
+      }
+
+      // ── Labels inside bar ──
+      if (bw >= 28) {
+        const midX = sx + bw / 2;
+        const isGap = seg.name === 'Gap';
+        const fs = bw >= 52 ? 10 : 9;
+        const name = bw < 48 ? (SHORT[seg.name] || seg.name) : seg.name;
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = isGap ? '#78350F' : 'rgba(255,255,255,0.95)';
+        ctx.font = `bold ${fs}px -apple-system,sans-serif`;
+        ctx.fillText(name, midX, BAR_Y + 18);
+
+        ctx.font = `${fs}px -apple-system,sans-serif`;
+        ctx.fillStyle = isGap ? '#92400E' : 'rgba(255,255,255,0.88)';
+        ctx.fillText(fmtAmt(seg.value) + '억', midX, BAR_Y + 32);
+
+        if (seg.count > 0 && bw >= 40) {
+          ctx.font = '9px -apple-system,sans-serif';
+          ctx.fillStyle = isGap ? '#B45309' : 'rgba(255,255,255,0.6)';
+          ctx.fillText(seg.count + '건', midX, BAR_Y + 45);
+        }
+
+        if (isGap && bw >= 52) {
+          ctx.font = '9px -apple-system,sans-serif';
+          ctx.fillStyle = '#B45309';
+          ctx.fillText('부족', midX, BAR_Y + 57);
+        }
+      }
+    });
+
+    // ── 3. Target vertical line ──
+    const xT = xs(TARGET);
+    ctx.save();
+    ctx.strokeStyle = '#6B4FBB'; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(xT, 14); ctx.lineTo(xT, BAR_Y + BAR_H); ctx.stroke();
+    ctx.restore();
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#6B4FBB'; ctx.font = 'bold 9px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('목표 5,000억', xT, 11);
+  });
+}
+
+function execFilter(filter, btn) {
+  const _t0 = performance.now();
+  S.execFilter = filter;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  let filtered = allExecOpps;
+  if (filter === '금융사업본부' || filter === '전략사업본부') {
+    filtered = allExecOpps.filter(o => o.사업부문 === filter);
+  } else if (filter === 'AX') {
+    filtered = allExecOpps.filter(o => o.사업유형 === 'AX');
+  } else if (filter === 'urgent') {
+    filtered = allExecOpps.filter(o => {const d=daysTo(o.입찰일);return d!==null&&d>=0&&d<=30});
+  } else if (filter === 'focus') {
+    filtered = allExecOpps.filter(o => o.중점고객여부);
+  }
+  const _t1 = performance.now();
+  renderExecDeals(filtered);
+  const _t2 = performance.now();
+  // 진단용 — 콘솔에서 어느 단계가 느린지 확인
+  console.log(`[execFilter] 필터:${(_t1-_t0).toFixed(1)}ms / 렌더:${(_t2-_t1).toFixed(1)}ms / 행수:${filtered.length}`);
+}
+
+function renderExecDeals(opps) {
+  const tbody = document.getElementById('execDealList');
+  const sorted = [...opps].sort((a,b) => {
+    const aA = a.stage_alert === 'danger' ? 1 : a.stage_alert === 'warning' ? 0 : -1;
+    const bA = b.stage_alert === 'danger' ? 1 : b.stage_alert === 'warning' ? 0 : -1;
+    if (bA !== aA) return bA - aA;
+    return (b.score?.total||0) - (a.score?.total||0);
+  });
+
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">딜이 없습니다</td></tr>';
+    return;
+  }
+
+  const html = sorted.map(o => {
+    const score = o.score || {};
+    const warn = (score.total < 40 || o.stage_alert === 'danger') ? '⚠️' : (o.stage_alert === 'warning') ? '⚠' : '';
+    const warnTitle = score.total < 40 ? 'Deal Score 40점 미만' :
+                      o.stage_alert === 'danger' ? 'Stage 체류 2배 초과' :
+                      o.stage_alert === 'warning' ? 'Stage 체류 1.5배 초과' : '';
+    return `<tr class="deal-row" onclick="openExecDeal('${o.id}')">
+      <td>
+        <div class="deal-name" style="font-size:12px">${o.사업기회명}</div>
+        <div class="deal-client">${bizTag(o.사업유형)}</div>
+      </td>
+      <td style="font-size:12px;color:var(--text2)">${o.고객사명}</td>
+      <td>${stageBadge(o.stage)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${scoreBarHtml(score, "static")}
+          <span style="font-size:11px;font-weight:700;min-width:24px">${(score.total||0).toFixed(0)}</span>
+        </div>
+      </td>
+      <td style="font-size:12px;font-weight:600;white-space:nowrap">${fmtAmt(o.수주목표액)}억</td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+async function openExecDeal(oppId) {
+  try {
+    const opp = await api('GET', `/api/opportunities/${oppId}`);
+    const panel = document.getElementById('execRightPanel');
+    const medd = opp.meddpicc || {};
+    const score = opp.score || {};
+    const dBid = daysTo(opp.입찰일);
+
+    panel.innerHTML = `
+      <div class="ai-panel" style="display:flex;flex-direction:column;padding:0">
+       <div style="flex:1;overflow-y:auto;padding:24px;min-height:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${opp.사업기회명}</div>
+            <div style="font-size:11px;color:var(--text2)">${opp.고객사명} · ${opp.영업대표} · ${opp.stage}</div>
+          </div>
+          <button onclick="resetExecPanel()" style="font-size:11px;color:var(--text2);padding:5px 10px;background:#F5F5F3;border:none;border-radius:6px;cursor:pointer">← 뒤로</button>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Deal Score</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:32px;font-weight:700;letter-spacing:-1px;line-height:1">${(score.total||0).toFixed(0)}</div>
+            <div style="flex:1">
+              <div class="score-axis-bar">
+                <div class="axis-sf" style="width:${score.strategic_fit||0}%"><span class="axis-label">SF</span></div>
+                <div class="axis-dq" style="width:${score.deal_quality||0}%"><span class="axis-label">DQ</span></div>
+                <div style="background:#34D399;height:100%;width:${score.activity||0}%"></div>
+                <div style="background:#F59E0B;height:100%;width:${score.cust_history||0}%"></div>
+                <div style="background:#EC4899;height:100%;width:${score.rep_rate||0}%"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+            <div style="background:#F8F6FF;border:1px solid #E8E0F8;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:8px;font-weight:700;color:#9B8FC0;margin-bottom:2px">SF</div>
+              <div style="font-size:14px;font-weight:700;color:#6B4FBB">${(score.strategic_fit||0).toFixed(1)}</div>
+              <div style="font-size:8px;color:#B0A0D0">/ 20</div>
+            </div>
+            <div style="background:#F4FFFE;border:1px solid #C6EDE9;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:8px;font-weight:700;color:#4CA89A;margin-bottom:2px">DQ</div>
+              <div style="font-size:14px;font-weight:700;color:#0E8A7C">${(score.deal_quality||0).toFixed(1)}</div>
+              <div style="font-size:8px;color:#7ABDB7">/ 30</div>
+            </div>
+            <div style="background:#F0FFF8;border:1px solid #B8EDD5;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:8px;font-weight:700;color:#2D9E68;margin-bottom:2px">AC</div>
+              <div style="font-size:14px;font-weight:700;color:#34D399">${(score.activity||0).toFixed(1)}</div>
+              <div style="font-size:8px;color:#6BBD98">/ 15</div>
+            </div>
+            <div style="background:#FFFBF0;border:1px solid #F5DFA0;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:8px;font-weight:700;color:#B08020;margin-bottom:2px">CH</div>
+              <div style="font-size:14px;font-weight:700;color:#F59E0B">${(score.cust_history||0).toFixed(1)}</div>
+              <div style="font-size:8px;color:#D4B060">/ 20</div>
+            </div>
+            <div style="background:#FFF0F7;border:1px solid #F5C0DC;border-radius:7px;padding:6px 8px;text-align:center">
+              <div style="font-size:8px;font-weight:700;color:#B04080;margin-bottom:2px">RR</div>
+              <div style="font-size:14px;font-weight:700;color:#EC4899">${(score.rep_rate||0).toFixed(1)}</div>
+              <div style="font-size:8px;color:#D480B0">/ 15</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase">MEDDPICC</div>
+          ${meddpiccDotsHtml(medd)}
+        </div>
+
+        <table class="info-table" style="margin-bottom:16px">
+          <tr><td>규모</td><td><strong>${fmtAmt(opp.수주목표액)}억원</strong></td></tr>
+          <tr><td>수주확도</td><td>${opp.수주확도}%</td></tr>
+          ${opp.입찰일 ? `<tr><td>입찰일</td><td>${opp.입찰일} ${dBid!==null&&dBid>=0?`<strong style="color:var(--danger)">D-${dBid}</strong>`:''}</td></tr>` : ''}
+          <tr><td>최근진행</td><td style="font-size:11px;color:var(--text)">${(opp.주요_진행사항||'').substring(0,60)}...</td></tr>
+        </table>
+
+        <div style="margin-bottom:16px">
+          <button onclick="pushAgenda('${opp.id}','${opp.영업대표.replace(/'/g,"\\'")}','${opp.사업기회명.replace(/'/g,"\\'")}','전영업')"
+            style="width:100%;background:#111111;color:#fff;border-radius:8px;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer">
+            📋 아젠다 Push
+          </button>
+        </div>
+        <div id="execDealQueryResult" style="margin-top:8px;display:none">
+          <div class="briefing-card"><div class="briefing-text" id="execDealQueryText"></div></div>
+        </div>
+       </div>
+       <div style="display:flex;gap:8px;padding:14px 20px;border-top:1px solid #F0F0EF;background:#FAFAF9">
+          <textarea class="chat-textarea" id="execDealQuery" placeholder="이 딜에 대해 질문하세요..." rows="1" oninput="autoResize(this)" style="flex:1"></textarea>
+          <button class="btn-send" onclick="sendExecDealQuery('${opp.id}')">전송</button>
+       </div>
+      </div>
+    `;
+  } catch(e) { console.error(e); }
+}
+
+function resetExecPanel() {
+  const panel = document.getElementById('execRightPanel');
+  panel.innerHTML = `
+    <div class="chat-header">
+      <div class="agent-avatar"></div>
+      <div><div style="font-weight:600;font-size:13px">Sales Assistant</div></div>
+    </div>
+    <div class="chat-messages" id="execMessages" style="flex:1"></div>
+    <div class="chat-input-area">
+      <div class="chat-input-wrap">
+        <button class="attach-btn" onclick="document.getElementById('execFileInput').click()" title="파일 첨부">+</button>
+        <input type="file" id="execFileInput" style="display:none" accept=".docx,.pdf,.txt,.md,.csv" onchange="handleExecFileAttachment(event)">
+        <textarea class="chat-textarea" id="execQuery" placeholder="예) 이번 분기 Gap을 어떻게 줄일 수 있을까요?" rows="1" oninput="autoResize(this)" onkeydown="onExecChatKey(event)"></textarea>
+        <button class="btn-send" onclick="sendExecQuery()">전송</button>
+      </div>
+    </div>
+  `;
+  loadExecBriefing();
+}
+
+async function loadExecBriefing() {
+  showTypingInPanel('execMessages');
+  try {
+    const res = await api('POST', '/api/briefing', {role:'exec'});
+    removeTypingInPanel('execMessages');
+    renderExecBriefingCard(res);
+  } catch(e) {
+    removeTypingInPanel('execMessages');
+    addMsgToPanel('execMessages', 'agent', '브리핑을 불러오는 중 오류가 발생했습니다.');
+  }
+}
+
+// 사업부문장 전용 브리핑 카드 — 전사 경영 관점 (달성률·Gap·부문 비교·Focus딜·임원 액션)
+function renderExecBriefingCard(res) {
+  const gap = res.gap || {};
+  const all = (typeof allExecOpps !== 'undefined' && allExecOpps.length) ? allExecOpps : [];
+
+  // ── Section 1: 목표 달성 추정 ──────────────────────────────
+  const rate = gap.achievement_rate != null ? gap.achievement_rate : 0;
+  const rateColor = rate >= 90 ? '#10B981' : rate >= 70 ? '#F59E0B' : '#EF4444';
+  const gapAmt = gap.gap || 0;
+
+  // ── Section 2: Gap 극복 위한 후보 Lead ────────────────────
+  // 계약완료 제외, 수주확도 높은 순 + 규모 가중 정렬, 상위 6건
+  const gapCandidates = all
+    .filter(o => o.stage !== '계약완료')
+    .sort((a,b) => {
+      const scoreA = (a.수주확도||0) * 0.6 + (a.수주목표액||0) * 0.4 / 100;
+      const scoreB = (b.수주확도||0) * 0.6 + (b.수주목표액||0) * 0.4 / 100;
+      return scoreB - scoreA;
+    })
+    .slice(0, 6);
+
+  let cumulativeAmt = 0;
+  const candidateRows = gapCandidates.map(o => {
+    cumulativeAmt += (o.수주목표액 || 0);
+    const probColor = (o.수주확도||0) >= 70 ? '#10B981' : (o.수주확도||0) >= 40 ? '#F59E0B' : '#EF4444';
+    const stageShort = o.stage.replace('Identified-','').replace('Registered','Reg').replace('Remind','Rem');
+    const cumFill = Math.min(cumulativeAmt / (gapAmt || 1) * 100, 100).toFixed(0);
+    return `<tr style="cursor:pointer" onclick="openExecDeal('${o.id}')">
+      <td style="font-size:11px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(o.사업기회명)}</td>
+      <td style="text-align:right;font-size:11px;font-weight:700">${fmtAmt(o.수주목표액)}억</td>
+      <td style="text-align:center;font-size:10px;color:${probColor};font-weight:700">${o.수주확도||0}%</td>
+      <td style="font-size:10px;color:var(--text2)">${stageShort}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="color:var(--text3);font-size:11px;text-align:center">후보 딜 없음</td></tr>';
+
+  // 누적 합산이 Gap 대비 몇 %인지
+  const coverPct = gapAmt > 0 ? Math.min(Math.round(cumulativeAmt / gapAmt * 100), 999) : 0;
+  const coverColor = coverPct >= 100 ? '#10B981' : coverPct >= 60 ? '#F59E0B' : '#EF4444';
+
+  // ── Section 3: 단계별 주요 딜 ────────────────────────────
+  const STAGE_ORDER = ['우선협상','Negotiated','Qualified','Validated','Identified','Lead'];
+  const stageBlocks = STAGE_ORDER.map(stage => {
+    const stageOpps = all
+      .filter(o => o.stage === stage)
+      .sort((a,b) => (b.수주목표액||0) - (a.수주목표액||0))
+      .slice(0, 2);
+    if (!stageOpps.length) return '';
+    const totalAmt = all.filter(o=>o.stage===stage).reduce((s,o)=>s+(o.수주목표액||0),0);
+    const totalCnt = all.filter(o=>o.stage===stage).length;
+    const stageBadgeColor = {
+      '우선협상':'#F59E0B','Negotiated':'#EC4899','Qualified':'#6B4FBB',
+      'Validated':'#10B981','Identified':'#3B82F6','Lead':'#9CA3AF'
+    }[stage] || '#9CA3AF';
+    const rows = stageOpps.map(o =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F5F5F3;cursor:pointer" onclick="openExecDeal('${o.id}')">
+        <span style="font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px">${escHtml(o.사업기회명)}</span>
+        <span style="font-size:11px;color:var(--text2);white-space:nowrap">${fmtAmt(o.수주목표액)}억 · ${escHtml(o.영업대표)}</span>
+      </div>`
+    ).join('');
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <span style="background:${stageBadgeColor};color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">${stage}</span>
+        <span style="font-size:10px;color:var(--text3)">${totalCnt}건 · ${fmtAmt(totalAmt)}억</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  // ── 카드 조합 ─────────────────────────────────────────────
+  const cardHtml = `
+    <div class="eb-card">
+      <div class="eb-headline">부문 파이프라인 브리핑</div>
+
+      <!-- 1. 목표 달성 추정 -->
+      <div class="eb-gap">
+        <div class="eb-gap-top">
+          <span>목표 달성 추정</span>
+          <span class="eb-rate" style="color:${rateColor}">${rate}%</span>
+        </div>
+        <div class="eb-gap-bar"><div class="eb-gap-fill" style="width:${Math.min(rate,100)}%;background:${rateColor}"></div></div>
+        <div class="eb-gap-sub">수주 Gap <strong>${gapAmt>0?Number(gapAmt).toLocaleString():'—'}억</strong> · 목표 ${gap.target!=null?Number(gap.target).toLocaleString():'5,000'}억 · 계약완료 ${gap.contracted!=null?Number(gap.contracted).toLocaleString():'—'}억</div>
+      </div>
+
+      <!-- 2. Gap 극복 위한 후보 Lead -->
+      <div class="eb-section">
+        <div class="eb-section-title">🎯 Gap 극복 위한 후보 Lead
+          <span style="font-size:10px;color:${coverColor};font-weight:700;margin-left:6px">후보 합산 ${fmtAmt(cumulativeAmt)}억 (Gap 대비 ${coverPct}%)</span>
+        </div>
+        <table class="eb-table">
+          <tr><th>사업기회</th><th style="text-align:right">금액</th><th style="text-align:center">확도</th><th>Stage</th></tr>
+          ${candidateRows}
+        </table>
+      </div>
+
+      <!-- 3. 단계별 주요 딜 -->
+      <div class="eb-section">
+        <div class="eb-section-title">📋 단계별 주요 딜 <span style="font-size:10px;color:var(--text3);font-weight:400">(각 Stage 상위 2건)</span></div>
+        ${stageBlocks || '<div style="font-size:11px;color:var(--text3)">진행 딜 없음</div>'}
+      </div>
+    </div>`;
+
+  const msgs = document.getElementById('execMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.innerHTML = `<div class="agent-avatar-sm"></div><div class="msg-bubble agent" style="max-width:560px">${cardHtml}</div>`;
+  msgs.appendChild(wrap);
+  msgs.scrollTop = 0;
+}
+
+function onExecChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendExecQuery(); }
+}
+
+async function sendExecQuery() {
+  const input = document.getElementById('execQuery');
+  if (!input) return;
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = ''; input.style.height = 'auto';
+  addMsgToPanel('execMessages', 'user', q);
+  showTypingInPanel('execMessages');
+  try {
+    const res = await api('POST', '/api/briefing', {role:'exec', query: q});
+    removeTypingInPanel('execMessages');
+    addMsgToPanel('execMessages', 'agent', res.briefing || '—');
+  } catch(e) {
+    removeTypingInPanel('execMessages');
+    addMsgToPanel('execMessages', 'agent', '오류가 발생했습니다. 다시 시도해 주세요.');
+  }
+}
+
+async function sendExecDealQuery(oppId) {
+  const q = document.getElementById('execDealQuery')?.value.trim();
+  if (!q) return;
+  const resultEl = document.getElementById('execDealQueryResult');
+  const textEl = document.getElementById('execDealQueryText');
+  if (resultEl) resultEl.style.display = 'block';
+  if (textEl) textEl.textContent = '답변 생성 중...';
+  try {
+    const res = await api('POST', '/api/chat', {opp_id: oppId, message: q, conversation: [], role: 'exec'});
+    if (textEl) textEl.textContent = res.reply || '—';
+  } catch(e) {
+    if (textEl) textEl.textContent = '오류가 발생했습니다.';
+  }
+}
+
+async function pushAgenda(oppId, repName, dealName, senderRole) {
+  // 모달을 띄워 지시 입력 (prompt 대체)
+  S.agendaTarget = {oppId, repName, dealName, sender: senderRole || '전영업'};
+  document.getElementById('agendaModalSub').innerHTML =
+    `<strong>${escHtml(dealName)}</strong> · 담당 ${escHtml(repName)}`;
+  document.getElementById('agendaModalText').value = '';
+  // 빠른 선택 칩
+  const quick = [
+    '다음 미팅 전 의사결정권자(예산 전결권자) 직접 접촉 확인',
+    '경쟁사 동향과 차별화 포인트 정리 요청',
+    '제안서 완성도 점검 및 입찰 일정 재확인',
+    '핵심 Pain 정량 수치 확보',
+  ];
+  document.getElementById('agendaModalQuick').innerHTML = quick.map(q =>
+    `<span class="agenda-quick-chip" onclick="document.getElementById('agendaModalText').value='${q.replace(/'/g,"\\'")}'">${q}</span>`
+  ).join('');
+  document.getElementById('agendaModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('agendaModalText').focus(), 100);
+}
+
+function closeAgendaModal() {
+  document.getElementById('agendaModal').style.display = 'none';
+}
+
+async function submitAgenda() {
+  const agenda = document.getElementById('agendaModalText').value.trim();
+  if (!agenda) { document.getElementById('agendaModalText').focus(); return; }
+  const t = S.agendaTarget || {};
+  try {
+    await api('POST', '/api/agenda', {
+      opp_id: t.oppId, agenda, target_rep: t.repName, exec_name: t.sender || '전영업'
+    });
+    closeAgendaModal();
+    showToast(`✓ ${t.repName}에게 지시가 전달됐습니다.`);
+  } catch(e) {
+    alert('지시 전송 실패');
+  }
+}
+
+// ════════════════════════════════════════
+// 관리자 뷰
+// ════════════════════════════════════════
+function loadAdminView() {
+  loadConflicts();
+  loadFewshots();
+  loadPrompt();
+}
+
+function adminTab(tab) {
+  document.querySelectorAll('.atab').forEach((t,i) => {
+    const tabs = ['conflicts','fewshots','prompt','meddpicc-analysis'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+  if (tab === 'meddpicc-analysis') loadMeddpiccAnalysis();
+}
+
+// ── MEDDPICC 분석 ──
+const _DEFAULT_WEIGHTS = {E:2.0,C:2.0,M:1.5,DC:1.5,DP:1.5,I:1.5,PP:1.0,CO:1.0};
+const _MEDDPICC_NAMES  = {E:'예산 집행 권한',C:'내부 추진자',M:'기대 성과',DC:'평가 기준',DP:'결정 절차',PP:'계약 절차',I:'핵심 Pain',CO:'경쟁 현황'};
+let _currentWeights = {..._DEFAULT_WEIGHTS};
+
+async function loadMeddpiccAnalysis() {
+  try {
+    const [analysis, weights] = await Promise.all([
+      api('GET', '/api/admin/meddpicc-analysis'),
+      api('GET', '/api/admin/meddpicc-weights'),
+    ]);
+    _currentWeights = weights;
+    renderMeddpiccAnalysis(analysis);
+    renderWeightSliders(weights);
+  } catch(e) { console.error(e); }
+}
+
+function renderMeddpiccAnalysis(data) {
+  document.getElementById('meddpiccAnalysisMeta').textContent =
+    `계약완료 딜 ${data.won_count}건 · 진행중 딜 ${data.active_count}건 기준`;
+
+  const tbody = document.getElementById('meddpiccAnalysisTable');
+  tbody.innerHTML = data.items.map(item => {
+    const diff = item.won_avg - item.active_avg;
+    const diffColor = diff > 0.3 ? 'color:var(--success);font-weight:700'
+                    : diff < -0.3 ? 'color:var(--danger)'
+                    : 'color:var(--text2)';
+    const diffTxt = diff >= 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+
+    // 점수 분포 바 (0~3점 각 비율)
+    const total = Object.values(item.won_dist).reduce((a,b)=>a+b,0) || 1;
+    const distColors = ['#E5E7EB','#93C5FD','#60A5FA','#2563EB'];
+    const distBar = [0,1,2,3].map(s => {
+      const pct = (item.won_dist[s] / total * 100).toFixed(1);
+      return `<div title="${s}점: ${item.won_dist[s]}건(${pct}%)"
+        style="flex:${item.won_dist[s]||0.001};background:${distColors[s]};height:14px;border-radius:2px"></div>`;
+    }).join('');
+
+    const highRateColor = item.won_high_rate >= 70 ? 'color:var(--success);font-weight:700'
+                        : item.won_high_rate >= 40 ? 'color:var(--warn)'
+                        : 'color:var(--danger)';
+
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;font-weight:600">${item.name} <span style="color:var(--text3);font-weight:400">(${item.code})</span></td>
+      <td style="text-align:center;padding:10px 12px">
+        <span style="font-size:16px;font-weight:700">${item.won_avg.toFixed(2)}</span>
+        <span style="font-size:11px;${diffColor};margin-left:4px">${diffTxt}</span>
+      </td>
+      <td style="text-align:center;padding:10px 12px;color:var(--text2)">${item.active_avg.toFixed(2)}</td>
+      <td style="padding:10px 12px">
+        <div style="display:flex;gap:2px;height:14px;border-radius:3px;overflow:hidden;min-width:160px">${distBar}</div>
+        <div style="display:flex;gap:2px;margin-top:3px;font-size:10px;color:var(--text3)">
+          <span style="flex:${item.won_dist[0]||0.001}">0점</span>
+          <span style="flex:${item.won_dist[1]||0.001}">1점</span>
+          <span style="flex:${item.won_dist[2]||0.001}">2점</span>
+          <span style="flex:${item.won_dist[3]||0.001}">3점</span>
+        </div>
+      </td>
+      <td style="text-align:center;padding:10px 12px;${highRateColor}">${item.won_high_rate}%</td>
+      <td style="text-align:center;padding:10px 12px;color:var(--accent);font-weight:600">${item.weight.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderWeightSliders(weights) {
+  const container = document.getElementById('weightSliders');
+  container.innerHTML = Object.keys(_DEFAULT_WEIGHTS).map(k => `
+    <div style="background:#fff;border-radius:8px;padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:600">${_MEDDPICC_NAMES[k]}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--accent)" id="wval-${k}">${(weights[k]||_DEFAULT_WEIGHTS[k]).toFixed(1)}</span>
+      </div>
+      <input type="range" min="0.5" max="3.0" step="0.5" value="${weights[k]||_DEFAULT_WEIGHTS[k]}"
+        style="width:100%;accent-color:var(--accent)"
+        oninput="document.getElementById('wval-${k}').textContent=parseFloat(this.value).toFixed(1); _currentWeights['${k}']=parseFloat(this.value)">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px">
+        <span>0.5</span><span>기본: ${_DEFAULT_WEIGHTS[k]}</span><span>3.0</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveWeights() {
+  try {
+    await api('PUT', '/api/admin/meddpicc-weights', {weights: _currentWeights});
+    showToast('✓ 가중치가 저장됐습니다. Score가 재계산됩니다.');
+    loadMeddpiccAnalysis();
+  } catch(e) { alert('저장 실패: ' + e.message); }
+}
+
+async function resetWeights() {
+  _currentWeights = {..._DEFAULT_WEIGHTS};
+  renderWeightSliders(_currentWeights);
+  try {
+    await api('PUT', '/api/admin/meddpicc-weights', {weights: _currentWeights});
+    showToast('✓ 기본값으로 초기화됐습니다.');
+    loadMeddpiccAnalysis();
+  } catch(e) { alert('초기화 실패: ' + e.message); }
+}
+
+async function loadConflicts() {
+  const item = document.getElementById('conflictFilterItem')?.value;
+  const status = document.getElementById('conflictFilterStatus')?.value;
+  let url = '/api/admin/conflicts?';
+  if (status) url += `status=${status}&`;
+  if (item) url += `item=${item}`;
+
+  try {
+    const conflicts = await api('GET', url);
+    const tbody = document.getElementById('conflictList');
+    if (!conflicts.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">충돌 로그가 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = conflicts.map(c => {
+      const statusHtml = c.status === 'pending'
+        ? '<span class="status-badge status-pending">미처리</span>'
+        : c.status === 'added_to_fewshot'
+        ? '<span class="status-badge status-added">Few-shot 추가됨</span>'
+        : '<span class="status-badge status-dismissed">무시됨</span>';
+      const btn = c.status === 'pending'
+        ? `<button class="btn-sm btn-primary" onclick="openConflictModal('${c.id}')">처리하기</button>` : '';
+      return `<tr>
+        <td><strong style="color:var(--accent)">${c.item}</strong></td>
+        <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.deal_name||c.deal_id}">${c.deal_name||c.deal_id}</td>
+        <td style="font-size:11px">${c.stage}</td>
+        <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)" title="${c.trigger_text}">${c.trigger_text}</td>
+        <td style="text-align:center;font-weight:700">${c.llm_score}</td>
+        <td style="text-align:center;font-weight:700;color:var(--accent)">${c.rep_final_score}</td>
+        <td>${statusHtml}</td>
+        <td>${btn}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+let currentConflictId = null;
+function openConflictModal(id) {
+  currentConflictId = id;
+  fetch('/api/admin/conflicts')
+    .then(r=>r.json())
+    .then(conflicts => {
+      const c = conflicts.find(x=>x.id===id);
+      if (!c) return;
+      document.getElementById('conflictModalBody').innerHTML = `
+        <div style="background:#F5F5F3;border-radius:8px;padding:14px;margin-bottom:14px;font-size:12px">
+          <div style="margin-bottom:6px"><strong>항목:</strong> ${c.item} (${MEDDPICC_NAMES[c.item]||c.item})</div>
+          <div style="margin-bottom:6px"><strong>트리거:</strong> "${c.trigger_text}"</div>
+          <div style="margin-bottom:6px"><strong>LLM 평가:</strong> ${c.llm_score}점 → <strong style="color:var(--accent)">영업대표 수정: ${c.rep_final_score}점</strong></div>
+          <div style="color:var(--text2)">${c.llm_reason}</div>
+        </div>
+        <div class="modal-field">
+          <label>정답 점수 (0~3)</label>
+          <input type="number" id="conflictScore" value="${c.rep_final_score}" min="0" max="3">
+        </div>
+        <div class="modal-field">
+          <label>판단 근거 메모</label>
+          <textarea id="conflictNote" rows="3" placeholder="왜 이 점수가 맞는지 설명해주세요. 이 내용이 Few-shot 이유로 저장됩니다."></textarea>
+        </div>
+      `;
+      document.getElementById('conflictModal').classList.add('open');
+    });
+}
+
+async function resolveConflict(addToFewshot) {
+  if (!currentConflictId) return;
+  const score = parseInt(document.getElementById('conflictScore')?.value || '0');
+  const note = document.getElementById('conflictNote')?.value || '';
+  try {
+    await api('POST', `/api/admin/conflicts/${currentConflictId}`, {
+      correct_score: score, admin_note: note, add_to_fewshot: addToFewshot
+    });
+    closeModal('conflictModal');
+    showToast(addToFewshot ? '✓ Few-shot에 추가됐습니다.' : '✓ 무시 처리됐습니다.');
+    loadConflicts();
+    if (addToFewshot) loadFewshots();
+  } catch(e) {
+    alert('처리 실패: ' + e.message);
+  }
+}
+
+async function loadFewshots() {
+  try {
+    const fewshots = await api('GET', '/api/admin/fewshots');
+    const tbody = document.getElementById('fewshotList');
+    if (!fewshots.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">등록된 Few-shot이 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = fewshots.map(f => `
+      <tr>
+        <td><strong style="color:var(--accent)">${f.item}</strong></td>
+        <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.input}">${f.input}</td>
+        <td style="text-align:center;font-weight:700;color:var(--success)">${f.correct_score}</td>
+        <td style="text-align:center;font-weight:700;color:var(--danger)">${f.wrong_score}</td>
+        <td style="font-size:11px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.reason}">${f.reason}</td>
+        <td style="font-size:11px;color:var(--text3)">${(f.created_at||'').substring(0,10)}</td>
+        <td><button class="btn-sm" onclick="deleteFewshot('${f.id}')" style="color:var(--danger);background:#FFF0F0">삭제</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+function openAddFewshotModal() {
+  document.getElementById('fewshotModal').classList.add('open');
+}
+
+async function saveFewshot() {
+  const item = document.getElementById('fsItem')?.value;
+  const input = document.getElementById('fsInput')?.value.trim();
+  const correct = parseInt(document.getElementById('fsCorrect')?.value || '0');
+  const wrong = parseInt(document.getElementById('fsWrong')?.value || '0');
+  const reason = document.getElementById('fsReason')?.value.trim();
+  if (!input || !reason) { alert('입력 예시와 판단 이유를 입력해주세요.'); return; }
+  try {
+    await api('POST', '/api/admin/fewshots', {item, input, correct_score: correct, wrong_score: wrong, reason});
+    closeModal('fewshotModal');
+    showToast('✓ Few-shot이 추가됐습니다.');
+    loadFewshots();
+  } catch(e) { alert('추가 실패: ' + e.message); }
+}
+
+async function deleteFewshot(id) {
+  if (!confirm('이 Few-shot을 삭제하시겠습니까?')) return;
+  try {
+    await fetch(`/api/admin/fewshots/${id}`, {method:'DELETE'});
+    showToast('✓ 삭제됐습니다.');
+    loadFewshots();
+  } catch(e) { alert('삭제 실패'); }
+}
+
+async function loadPrompt() {
+  try {
+    const res = await api('GET', '/api/admin/prompt');
+    document.getElementById('promptEditor').value = res.prompt || '';
+  } catch(e) { console.error(e); }
+}
+
+async function savePrompt() {
+  const prompt = document.getElementById('promptEditor')?.value || '';
+  try {
+    await api('PUT', '/api/admin/prompt', {prompt});
+    showToast('✓ 프롬프트가 저장됐습니다.');
+  } catch(e) { alert('저장 실패: ' + e.message); }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadRepView();
+  document.getElementById('allDealsModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAllDealsModal();
+  });
+});
+</script>
+</body>
+</html>

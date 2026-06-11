@@ -1,0 +1,338 @@
+[
+  {
+    "name": "KB국민은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "제주항공",
+    "industry": "항공",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "NH농협은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "신라호텔",
+    "industry": "호텔",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "CJ푸드빌",
+    "industry": "외식",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "롯데쇼핑",
+    "industry": "유통",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "SK스토아",
+    "industry": "홈쇼핑",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "저축은행중앙회",
+    "industry": "저축은행",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "홈플러스",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "대한항공",
+    "industry": "항공",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "한진",
+    "industry": "물류",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "한국은행",
+    "industry": "중앙은행",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "IBK기업은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "농협중앙회",
+    "industry": "농협",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "무신사",
+    "industry": "이커머스",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "수협중앙회",
+    "industry": "수협",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "한국투자저축은행",
+    "industry": "저축은행",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "CJ올리브영",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "신세계",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "현대해상",
+    "industry": "보험",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "현대백화점",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "롯데카드",
+    "industry": "카드",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "롯데호텔",
+    "industry": "호텔",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "하나은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "우리은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "CJ대한통운",
+    "industry": "물류",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "NH투자증권",
+    "industry": "증권",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "이노시스",
+    "industry": "서비스",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "SSG닷컴",
+    "industry": "이커머스",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "이랜드리테일",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "메리츠화재",
+    "industry": "보험",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "카카오커머스",
+    "industry": "이커머스",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "교촌에프앤비",
+    "industry": "외식",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "교보생명",
+    "industry": "보험",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "bhc그룹",
+    "industry": "외식",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "현대글로비스",
+    "industry": "물류",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "신한은행",
+    "industry": "은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "한국투자증권",
+    "industry": "증권",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "파르나스호텔",
+    "industry": "호텔",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "이마트",
+    "industry": "유통",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "토스뱅크",
+    "industry": "인터넷은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "롯데글로벌로지스",
+    "industry": "물류",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "신협중앙회",
+    "industry": "신협",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "DB손해보험",
+    "industry": "보험",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "쿠팡",
+    "industry": "이커머스",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "현대카드",
+    "industry": "카드",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "카카오뱅크",
+    "industry": "인터넷은행",
+    "is_key_account": true,
+    "account_type": "대외"
+  },
+  {
+    "name": "BGF리테일",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "DHL코리아",
+    "industry": "물류",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "미래에셋증권",
+    "industry": "증권",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "KB증권",
+    "industry": "증권",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "쿠팡로지스틱스",
+    "industry": "물류",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "GS리테일",
+    "industry": "유통",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "케이뱅크",
+    "industry": "인터넷은행",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "한화생명",
+    "industry": "보험",
+    "is_key_account": false,
+    "account_type": "대외"
+  },
+  {
+    "name": "아시아나항공",
+    "industry": "항공",
+    "is_key_account": false,
+    "account_type": "대외"
+  }
+]

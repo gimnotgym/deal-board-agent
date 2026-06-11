@@ -1653,10 +1653,10 @@ async function openDeal(oppId) {
     S.askedCount = 0;
     S.meetingContext = null;
 
-    document.getElementById('rep-p1').style.display = 'none';
-    document.getElementById('rep-p2').style.display = 'block';
-
     const setEl = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+
+    setEl('rep-p1', el => el.style.display = 'none');
+    setEl('rep-p2', el => el.style.display = 'block');
 
     setEl('p2Title', el => el.textContent = opp.사업기회명);
 
@@ -1687,58 +1687,56 @@ async function openDeal(oppId) {
 }
 
 function renderScorePanel(score, oldScore) {
+  const g = id => document.getElementById(id);
   const s = score || {strategic_fit:0, deal_quality:0, activity:0, cust_history:0, rep_rate:0, total:0};
   const total = s.total || 0;
-  const totalEl = document.getElementById('scoreTotal');
+  const totalEl = g('scoreTotal');
 
   if (oldScore) {
     const diff = total - (oldScore.total || 0);
     const sign = diff >= 0 ? '+' : '';
-    document.getElementById('scoreChange').innerHTML = `<span style="color:${diff>=0?'var(--success)':'var(--danger)'}">↑ ${sign}${diff.toFixed(1)}점</span>`;
-    totalEl.classList.add('score-change-anim');
-    setTimeout(() => totalEl.classList.remove('score-change-anim'), 1000);
+    const scEl = g('scoreChange');
+    if (scEl) scEl.innerHTML = `<span style="color:${diff>=0?'var(--success)':'var(--danger)'}">↑ ${sign}${diff.toFixed(1)}점</span>`;
+    if (totalEl) { totalEl.classList.add('score-change-anim'); setTimeout(() => totalEl.classList.remove('score-change-anim'), 1000); }
   } else {
-    document.getElementById('scoreChange').textContent = '';
+    const scEl = g('scoreChange'); if (scEl) scEl.textContent = '';
   }
 
-  totalEl.textContent = total.toFixed(0);
+  if (totalEl) totalEl.textContent = total.toFixed(0);
 
   // 5-Factor 값 표시
-  document.getElementById('sfVal').textContent = (s.strategic_fit ?? 0).toFixed(1);
-  document.getElementById('dqVal').textContent = (s.deal_quality  ?? 0).toFixed(1);
-  document.getElementById('acVal').textContent = (s.activity      ?? 0).toFixed(1);
-  document.getElementById('chVal').textContent = (s.cust_history  ?? 0).toFixed(1);
-  document.getElementById('rrVal').textContent = (s.rep_rate      ?? 0).toFixed(1);
+  ['sfVal','dqVal','acVal','chVal','rrVal'].forEach((id, i) => {
+    const keys = ['strategic_fit','deal_quality','activity','cust_history','rep_rate'];
+    const el = g(id); if (el) el.textContent = (s[keys[i]] ?? 0).toFixed(1);
+  });
 
   // SF 상세 (중점사업/중점고객/AX)
   const sfItems = [];
   if (S.currentOpp?.중점사업여부) sfItems.push('중점사업 +10');
   if (S.currentOpp?.중점고객여부) sfItems.push('중점고객 +6');
   if (S.currentOpp?.AX사업여부)   sfItems.push('AX사업 +4');
-  document.getElementById('sfDetail').textContent = sfItems.length ? sfItems.join(' · ') : '해당 없음';
+  const sfDet = g('sfDetail'); if (sfDet) sfDet.textContent = sfItems.length ? sfItems.join(' · ') : '해당 없음';
 
   // AC 상세 (최근 30일 활동 수)
   const log = S.currentOpp?.activity_log || [];
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
   const recentActs = log.filter(e => new Date(e.date) >= cutoff).length;
-  document.getElementById('acDetail').textContent = `최근 30일 업데이트 ${recentActs}회`;
+  const acDet = g('acDetail'); if (acDet) acDet.textContent = `최근 30일 업데이트 ${recentActs}회`;
 
   // CH 상세
-  document.getElementById('chDetail').textContent = '과거 계약 이력 기반';
+  const chDet = g('chDetail'); if (chDet) chDet.textContent = '과거 계약 이력 기반';
 
   // RR 상세
   const wr = S.currentOpp?._rep_win_rate;
   const cnt = S.currentOpp?._rep_deal_count ?? 0;
-  document.getElementById('rrDetail').textContent = wr != null
+  const rrDet = g('rrDetail'); if (rrDet) rrDet.textContent = wr != null
     ? `${S.currentOpp?.영업대표} 승률 ${wr}% (${cnt}건)`
     : `${S.currentOpp?.영업대표} 이력 부족 (${cnt}건) — 기본값 적용`;
 
-  // 바 차트 — 각 점수값이 곧 전체 100점 대비 비율
-  document.getElementById('axSF').style.width = (s.strategic_fit ?? 0).toFixed(1) + '%';
-  document.getElementById('axDQ').style.width = (s.deal_quality  ?? 0).toFixed(1) + '%';
-  document.getElementById('axAC').style.width = (s.activity      ?? 0).toFixed(1) + '%';
-  document.getElementById('axCH').style.width = (s.cust_history  ?? 0).toFixed(1) + '%';
-  document.getElementById('axRR').style.width = (s.rep_rate      ?? 0).toFixed(1) + '%';
+  // 바 차트
+  [['axSF','strategic_fit'],['axDQ','deal_quality'],['axAC','activity'],['axCH','cust_history'],['axRR','rep_rate']].forEach(([id,k]) => {
+    const el = g(id); if (el) el.style.width = (s[k] ?? 0).toFixed(1) + '%';
+  });
 }
 
 async function sendInitialGreeting(opp) {

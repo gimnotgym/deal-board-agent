@@ -1656,32 +1656,33 @@ async function openDeal(oppId) {
     document.getElementById('rep-p1').style.display = 'none';
     document.getElementById('rep-p2').style.display = 'block';
 
-    document.getElementById('p2Title').textContent = opp.사업기회명;
+    const setEl = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+
+    setEl('p2Title', el => el.textContent = opp.사업기회명);
 
     const tags = [];
     if (opp.AX사업여부) tags.push('<span class="badge-ax">AX</span>');
     if (opp.중점고객여부) tags.push('<span class="badge-key">중점고객</span>');
     if (opp.중점사업여부) tags.push('<span class="badge-key">중점사업</span>');
-    document.getElementById('p2Tags').innerHTML = tags.join('');
+    setEl('p2Tags', el => el.innerHTML = tags.join(''));
 
     renderScorePanel(opp.score, null);
     renderDealDetail(opp);
 
     const maxQ = STAGE_MAX_Q[opp.stage] || 0;
-    document.getElementById('stageQuotaInfo').textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화';
+    setEl('stageQuotaInfo', el => el.textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화');
 
-    document.getElementById('chatMessages').innerHTML = '';
-    document.getElementById('previewArea').style.display = 'none';
-    document.getElementById('btnUpdate').style.display = 'none';
-    document.getElementById('dealInfoSection').style.display = 'none';
-    document.getElementById('dealInfoToggleBtn').innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>';
+    setEl('chatMessages', el => el.innerHTML = '');
+    setEl('previewArea', el => el.style.display = 'none');
+    setEl('btnUpdate', el => el.style.display = 'none');
+    setEl('dealInfoSection', el => el.style.display = 'none');
+    setEl('dealInfoToggleBtn', el => el.innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>');
 
     loadActivityLog(opp.id);
     loadCoachingNotes(opp);
     await sendInitialGreeting(opp);
   } catch(e) {
-    console.error(e);
-    alert('딜 로딩 실패: ' + e.message);
+    console.error('딜 로딩 실패:', e);
   }
 }
 

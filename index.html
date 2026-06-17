@@ -135,14 +135,18 @@ input,textarea,select{font-family:inherit}
 .activity-log-toggle:hover{background:#F5F5F3}
 .activity-log-toggle #activityLogCaret{font-size:9px;color:var(--text3);transition:transform .15s}
 .activity-log-count{margin-left:auto;font-size:11px;color:var(--text3);background:#EFEEEA;border-radius:10px;padding:1px 8px}
-.activity-log-body{padding:4px 20px 12px;max-height:240px;overflow-y:auto}
-.activity-item{padding:10px 0;border-top:1px solid #F0F0EF}
-.activity-item:first-child{border-top:none}
-.activity-item-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
-.activity-item-time{font-size:10px;color:var(--text3);margin-left:auto;flex-shrink:0}
-.activity-item-preview{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5}
-.activity-item-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.activity-chip{font-size:10px;color:#6B4FBB;background:rgba(107,79,187,.08);border-radius:5px;padding:2px 7px}
+.activity-log-body{padding:4px 12px 12px;max-height:320px;overflow-y:auto}
+.activity-item{border:1px solid #EEECEA;border-radius:8px;margin-bottom:6px;overflow:hidden;background:#fff}
+.activity-item-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none}
+.activity-item-head:hover{background:#F8F7FF}
+.activity-item-title{font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-item-time{font-size:10px;color:var(--text3);flex-shrink:0}
+.activity-item-caret{font-size:9px;color:var(--text3);margin-left:4px;transition:transform .15s;flex-shrink:0}
+.activity-item-body{display:none;padding:0 12px 10px;border-top:1px solid #F0F0EF}
+.activity-item-body.open{display:block}
+.activity-item-summary{font-size:12px;color:var(--text2);line-height:1.7;margin-top:8px;white-space:pre-line}
+.activity-item-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.activity-chip{font-size:10px;color:#6B4FBB;background:rgba(107,79,187,.08);border-radius:5px;padding:2px 7px;border:1px solid rgba(107,79,187,.15)}
 .agent-avatar{width:32px;height:32px;border-radius:50%;position:relative;overflow:hidden;isolation:isolate;flex-shrink:0;background:radial-gradient(circle at 33% 28%,rgba(255,250,253,.82) 0%,rgba(248,191,220,.55) 20%,rgba(217,166,242,.42) 42%,rgba(159,184,246,.38) 64%,rgba(110,120,214,.36) 85%,rgba(58,53,111,.40) 100%);box-shadow:0 4px 14px rgba(110,90,200,.28)}
 .agent-avatar::before{content:'';position:absolute;inset:-32%;border-radius:50%;z-index:0;background:conic-gradient(from 0deg,#FFB5C8,#E8A0FF,#A0C4FF,#B8F0E0,#FFE0A3,#FFB5C8);filter:blur(3px) saturate(1.2);opacity:.62;animation:agentSpin 9s linear infinite}
 .agent-avatar::after{content:'';position:absolute;inset:0;border-radius:50%;z-index:1;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 24%),radial-gradient(circle at 50% 86%,rgba(255,255,255,.40) 0%,rgba(255,255,255,0) 30%),radial-gradient(circle at 50% 50%,rgba(255,255,255,0) 78%,rgba(255,255,255,.50) 90%,rgba(255,255,255,0) 100%),radial-gradient(circle at 70% 78%,rgba(28,20,70,.40) 0%,rgba(28,20,70,0) 46%),radial-gradient(circle at 50% 50%,rgba(28,20,70,0) 64%,rgba(28,20,70,.30) 100%)}
@@ -582,7 +586,7 @@ function ensurePdfjs(cb) {
         <div id="activityLog" class="activity-log" style="display:none">
           <button class="activity-log-toggle" onclick="toggleActivityLog()">
             <span id="activityLogCaret">▶</span>
-            <span>📎 첨부·활동 로그</span>
+            <span>📋 활동 히스토리</span>
             <span id="activityLogCount" class="activity-log-count"></span>
           </button>
           <div id="activityLogBody" class="activity-log-body" style="display:none"></div>
@@ -1937,29 +1941,45 @@ async function loadActivityLog(oppId) {
 
     panel.style.display = 'block';
     countEl.textContent = `${items.length}건`;
-    body.innerHTML = items.map(it => {
-      const icon = it.source === 'file' ? '📎' : '📝';
-      const title = it.source === 'file'
-        ? escHtml(it.filename || '첨부 파일')
-        : '직접 입력';
-      const preview = it.source === 'file'
-        ? escHtml(it.summary || '')
-        : escHtml(it.preview || '');
-      const chips = (it.changes || []).map(c =>
-        `<span class="activity-chip">${escHtml(c.name)}(${c.code}) ${c.from}→${c.to}</span>`
-      ).join('');
+
+    body.innerHTML = items.map((it, idx) => {
+      const icon = it.source === 'file' ? '📎' : '💬';
+      const title = escHtml(it.title || (it.source === 'file' ? (it.filename || '첨부 파일') : '대화 업데이트'));
+      const summary = escHtml(it.summary || it.preview || '');
+      const chips = (it.changes || []).map(c => {
+        const dir = c.to > c.from ? '▲' : '▼';
+        const col = c.to > c.from ? '#6B4FBB' : '#E57373';
+        return `<span class="activity-chip" style="color:${col};border-color:${col}20">${dir} ${escHtml(c.name)} ${c.from}→${c.to}</span>`;
+      }).join('');
+      const timeStr = fmtLogTime(it.timestamp);
+      const bodyId = `act-body-${idx}`;
+      const caretId = `act-caret-${idx}`;
+
       return `<div class="activity-item">
-        <div class="activity-item-head">
-          <span>${icon}</span><strong>${title}</strong>
-          <span class="activity-item-time">${fmtLogTime(it.timestamp)}</span>
+        <div class="activity-item-head" onclick="toggleActItem('${bodyId}','${caretId}')">
+          <span style="font-size:13px">${icon}</span>
+          <span class="activity-item-title">${title}</span>
+          <span class="activity-item-time">${timeStr}</span>
+          <span class="activity-item-caret" id="${caretId}">▶</span>
         </div>
-        ${preview ? `<div class="activity-item-preview">${preview}</div>` : ''}
-        ${chips ? `<div class="activity-item-chips">${chips}</div>` : ''}
+        <div class="activity-item-body" id="${bodyId}">
+          ${summary ? `<div class="activity-item-summary">${summary}</div>` : ''}
+          ${chips ? `<div class="activity-item-chips">${chips}</div>` : ''}
+        </div>
       </div>`;
     }).join('');
   } catch(e) {
     panel.style.display = 'none';
   }
+}
+
+function toggleActItem(bodyId, caretId) {
+  const body = document.getElementById(bodyId);
+  const caret = document.getElementById(caretId);
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (caret) { caret.textContent = isOpen ? '▶' : '▼'; caret.style.transform = isOpen ? '' : 'rotate(0deg)'; }
 }
 
 function loadCoachingNotes(opp) {
@@ -2040,6 +2060,7 @@ async function doUpdate() {
       llm_scores: S.evalResult.scores,
       input_text: inputText,
       preview_text: S.evalResult.preview_text || '',
+      conversation: S.conversation || [],
     });
 
     if (res.success) {

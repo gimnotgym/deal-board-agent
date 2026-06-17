@@ -987,6 +987,7 @@ class UpdateRequest(BaseModel):
     input_text: str
     llm_scores: dict
     preview_text: str = ""
+    conversation: list = []   # 대화 전체 [{role, text}, ...]
 
 @app.post("/api/meddpicc/update")
 async def update_meddpicc(req: UpdateRequest):
@@ -1051,16 +1052,13 @@ async def update_meddpicc(req: UpdateRequest):
 
     # ── 첨부·활동 로그 적재 (별도 activity_log 파일) ──
     raw_in = req.input_text or ""
-    # 파일 첨부 패턴: "[회의록 분석] 파일명" → 파일명/소스 구분
     fname = ""
     m = re.match(r"\[회의록 분석\]\s*(.+)", raw_in)
     if m:
         fname = m.group(1).strip()
         source = "file"
-        preview = ""  # 파일 첨부는 본문이 input_text에 없으므로 preview_text로 대체
     else:
         source = "text"
-        preview = raw_in[:200]  # 직접 입력은 앞 200자만 보관 (가볍고 안전)
 
     change_chips = []
     code_names = {"E": "예산 집행 권한", "C": "내부 추진자", "M": "기대 성과",
@@ -1076,6 +1074,51 @@ async def update_meddpicc(req: UpdateRequest):
                 "from": old_v, "to": new_v,
             })
 
+    # ── AI 대화 요약 생성 ──
+    ai_title = ""
+    ai_summary = req.preview_text or ""
+    conv = req.conversation or []
+    if conv and len(conv) >= 2:
+        try:
+            conv_text = "\n".join(
+                f"{'영업대표' if t.get('role')=='rep' else 'AI'}: {t.get('text','')}"
+                for t in conv[-20:]  # 최근 20턴
+            )
+            changed_names = [f"{c['name']}({c['code']})" for c in change_chips]
+            changed_str = ", ".join(changed_names) if changed_names else "없음"
+            sum_prompt = f"""다음은 영업대표와 AI 영업 어시스턴트 간의 딜 업데이트 대화입니다.
+딜명: {opp.get('사업기회명','')} / 고객사: {opp.get('고객사명','')}
+이번에 변경된 MEDDPICC 항목: {changed_str}
+
+[대화 내용]
+{conv_text}
+
+위 대화를 바탕으로 아래 두 가지를 JSON으로 반환하세요.
+1. title: 이번 업데이트를 한 줄로 표현 (예: "CTO 통화 — 결정절차·챔피언 확인", "회의록 분석 — 예산·평가기준 파악") 15자 이내
+2. summary: 이번 대화에서 파악된 핵심 내용 3~5줄. 각 줄은 "- "로 시작. 사실 중심으로 간결하게.
+
+반드시 아래 형식으로만 답하세요:
+{{"title": "...", "summary": "- ...\n- ...\n- ..."}}"""
+
+            resp = anthropic_client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=400,
+                messages=[{"role": "user", "content": sum_prompt}]
+            )
+            raw = resp.content[0].text.strip()
+            # JSON 파싱
+            import json as _json
+            parsed = _json.loads(raw)
+            ai_title = parsed.get("title", "")
+            ai_summary = parsed.get("summary", req.preview_text or "")
+        except Exception:
+            # 요약 실패 시 기존 preview_text 사용
+            ai_title = fname if fname else "대화 업데이트"
+            ai_summary = req.preview_text or ""
+
+    if not ai_title:
+        ai_title = fname if fname else ("대화 업데이트" if conv else "메모 입력")
+
     activity = load("activity_log")
     if not isinstance(activity, list):
         activity = []
@@ -1084,11 +1127,11 @@ async def update_meddpicc(req: UpdateRequest):
         "timestamp": datetime.now().isoformat(),
         "opp_id": req.opp_id,
         "deal_name": opp.get("사업기회명", ""),
-        "source": source,          # "file" | "text"
-        "filename": fname,         # 파일 첨부 시 파일명
-        "preview": preview,        # 직접 입력 앞 200자
-        "summary": req.preview_text or "",   # 오늘 확인된 내용 요약
-        "changes": change_chips,   # 점수 변경 칩
+        "source": source,
+        "filename": fname,
+        "title": ai_title,
+        "summary": ai_summary,
+        "changes": change_chips,
     })
     save("activity_log", activity)
 

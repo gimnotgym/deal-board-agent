@@ -92,7 +92,9 @@ async def warm_cache():
                 "normal"
             )
         cache_set("opps_all_all_all_all_all_all", opps)
-        print(f"[startup] {len(opps)}개 딜 스코어 계산 완료")
+        for o in opps:
+            cache_set(f"opp_{o['id']}", o)
+        print(f"[startup] {len(opps)}개 딜 스코어 계산 완료 (개별 캐시 포함)")
     except Exception as e:
         print(f"[startup] 캐시 워밍 실패: {e}")
 

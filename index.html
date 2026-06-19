@@ -1586,7 +1586,7 @@ function renderRepDealList(opps) {
     const dBid = daysTo(o.입찰일);
     const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
     const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
-    return `<tr class="deal-row" onclick="openDeal('${o.id}')" id="row-${o.id}">
+    return `<tr class="deal-row" onclick="openDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')" id="row-${o.id}">
       <td>
         <div class="deal-name">${o.사업기회명}</div>
         <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
@@ -1627,7 +1627,7 @@ function showMoreRepDeals() {
     const dBid = daysTo(o.입찰일);
     const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
     const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
-    return `<tr class="deal-row" onclick="openDeal('${o.id}')" id="row-${o.id}">
+    return `<tr class="deal-row" onclick="openDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')" id="row-${o.id}">
       <td>
         <div class="deal-name">${o.사업기회명}</div>
         <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
@@ -1648,10 +1648,24 @@ function showMoreRepDeals() {
 }
 
 // ── Page 2: Deal Detail ──
+const _prefetchCache = {};
+function prefetchDeal(oppId) {
+  if (_prefetchCache[oppId]) return;
+  _prefetchCache[oppId] = api('GET', `/api/opportunities/${oppId}`).catch(() => {});
+}
+
 async function openDeal(oppId) {
   const sessionId = ++S.dealSessionId;
   try {
-    const opp = await api('GET', `/api/opportunities/${oppId}`);
+    // 즉시 p2로 전환 + 로딩 표시
+    const setEl = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+    setEl('rep-p1', el => el.style.display = 'none');
+    setEl('rep-p2', el => el.style.display = 'block');
+    setEl('p2Title', el => el.textContent = '로딩 중...');
+    setEl('chatMessages', el => el.innerHTML = '');
+
+    const opp = await (_prefetchCache[oppId] || api('GET', `/api/opportunities/${oppId}`));
+    delete _prefetchCache[oppId];
     if (sessionId !== S.dealSessionId) return;
     S.currentOpp = opp;
     S.conversation = [];
@@ -1659,11 +1673,6 @@ async function openDeal(oppId) {
     S.pendingFile = null;
     S.askedCount = 0;
     S.meetingContext = null;
-
-    const setEl = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
-
-    setEl('rep-p1', el => el.style.display = 'none');
-    setEl('rep-p2', el => el.style.display = 'block');
 
     setEl('p2Title', el => el.textContent = opp.사업기회명);
 

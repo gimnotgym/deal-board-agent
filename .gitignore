@@ -20,3 +20,6 @@ screenshot_*.png
 .vscode/
 .claude/
 *.bat
+
+# 로컬 테스트 데이터 (Render에 반영되지 않도록)
+data/

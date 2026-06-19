@@ -2085,9 +2085,23 @@ async function doUpdate() {
       document.getElementById('previewArea').style.display = 'none';
       btn.style.display = 'none';
       addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점.`);
+
+      // 목록 행 점수 즉시 업데이트
+      const row = document.getElementById(`row-${S.currentOpp.id}`);
+      if (row) {
+        const scoreCell = row.querySelector('.score-num');
+        if (scoreCell) scoreCell.textContent = (res.score?.total||0).toFixed(0);
+      }
+      // prefetch 캐시 무효화 (최신 점수 반영)
+      delete _prefetchCache[S.currentOpp.id];
+
       S.evalResult = null;
       S.pendingFile = null;
       loadActivityLog(S.currentOpp.id);
+
+      // 채팅창 맨 아래로 스크롤
+      const msgs = document.getElementById('chatMessages');
+      if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 100);
     }
   } catch(e) {
     addMsg('agent', '업데이트 중 오류가 발생했습니다.');

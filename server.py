@@ -38,10 +38,13 @@ def cache_set(key, val):
     """캐시에 값 저장"""
     _cache[key] = (val, time())
 
-def cache_clear(pattern=None):
-    """캐시 초기화"""
-    if pattern:
-        _cache.clear()  # 간단히 전체 초기화 (필요 시 패턴 매칭 추가)
+def cache_clear(opp_id=None):
+    """캐시 초기화 — opp_id 지정 시 해당 딜 + 파이프라인만 삭제, 미지정 시 전체"""
+    if opp_id:
+        _cache.pop(f"opp_{opp_id}", None)
+        # 파이프라인 캐시(pipeline_*)는 전체 삭제 (키 패턴 다양)
+        for k in [k for k in _cache if k.startswith("pipeline_") or k.startswith("opps_")]:
+            _cache.pop(k, None)
     else:
         _cache.clear()
 
@@ -1063,7 +1066,7 @@ async def update_meddpicc(req: UpdateRequest):
 
     save("opportunities", opps)
     save("conflict_log", conflicts)
-    cache_clear()  # 딜 데이터 변경 시 캐시 무효화
+    cache_clear(req.opp_id)
 
     # ── 첨부·활동 로그 적재 (별도 activity_log 파일) ──
     raw_in = req.input_text or ""
@@ -1164,10 +1167,12 @@ async def update_meddpicc(req: UpdateRequest):
         opps[idx]["activity_log"] = []
     opps[idx]["activity_log"].append({"date": today_str, "type": "meddpicc_update"})
     save("opportunities", opps)
-    cache_clear()
-
+    # 업데이트된 딜 즉시 재캐싱
     closed_deals = load("closed_deals")
-    return {"success": True, "score": calc_deal_score(opps[idx], closed_deals)}
+    opps[idx]["score"] = calc_deal_score(opps[idx], closed_deals)
+    cache_set(f"opp_{req.opp_id}", opps[idx])
+    cache_clear(req.opp_id)  # 파이프라인 캐시만 무효화
+    return {"success": True, "score": opps[idx]["score"]}
 
 # ── 회의록 분석 API ──
 class MeetingAnalyzeRequest(BaseModel):

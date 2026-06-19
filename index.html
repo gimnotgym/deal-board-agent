@@ -1659,47 +1659,83 @@ function prefetchDeal(oppId) {
 async function openDeal(oppId) {
   const sessionId = ++S.dealSessionId;
   try {
-    // 즉시 p2로 전환 + 로딩 표시
     const setEl = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
-    setEl('rep-p1', el => el.style.display = 'none');
-    setEl('rep-p2', el => el.style.display = 'block');
-    setEl('p2Title', el => el.textContent = '로딩 중...');
-    setEl('chatMessages', el => el.innerHTML = '');
 
+    // 클라이언트 캐시에서 즉시 렌더 (서버 왕복 없이 0ms)
+    const cached = (S.opps || []).find(o => o.id === oppId);
+    if (cached) {
+      setEl('rep-p1', el => el.style.display = 'none');
+      setEl('rep-p2', el => el.style.display = 'block');
+      setEl('p2Title', el => el.textContent = cached.사업기회명);
+      setEl('chatMessages', el => el.innerHTML = '');
+      S.currentOpp = cached;
+      S.conversation = [];
+      S.evalResult = null;
+      S.pendingFile = null;
+      S.askedCount = 0;
+      S.meetingContext = null;
+      const tags = [];
+      if (cached.AX사업여부) tags.push('<span class="badge-ax">AX</span>');
+      if (cached.중점고객여부) tags.push('<span class="badge-key">중점고객</span>');
+      if (cached.중점사업여부) tags.push('<span class="badge-key">중점사업</span>');
+      setEl('p2Tags', el => el.innerHTML = tags.join(''));
+      renderScorePanel(cached.score, null);
+      renderDealDetail(cached);
+      const maxQ = STAGE_MAX_Q[cached.stage] || 0;
+      setEl('stageQuotaInfo', el => el.textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화');
+      setEl('previewArea', el => el.style.display = 'none');
+      setEl('btnUpdate', el => el.style.display = 'none');
+      setEl('dealInfoSection', el => el.style.display = 'none');
+      setEl('dealInfoToggleBtn', el => el.innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>');
+      loadActivityLog(cached.id);
+      loadCoachingNotes(cached);
+      sendInitialGreeting(cached, sessionId);
+    } else {
+      // 폴백: 서버에서 fetch
+      setEl('rep-p1', el => el.style.display = 'none');
+      setEl('rep-p2', el => el.style.display = 'block');
+      setEl('p2Title', el => el.textContent = '로딩 중...');
+      setEl('chatMessages', el => el.innerHTML = '');
+    }
+
+    // 백그라운드로 최신 데이터 동기화 (스코어 업데이트 등 반영)
     const opp = await (_prefetchCache[oppId] || api('GET', `/api/opportunities/${oppId}`));
     delete _prefetchCache[oppId];
     if (sessionId !== S.dealSessionId) return;
-    S.currentOpp = opp;
-    S.conversation = [];
-    S.evalResult = null;
-    S.pendingFile = null;
-    S.askedCount = 0;
-    S.meetingContext = null;
 
-    setEl('p2Title', el => el.textContent = opp.사업기회명);
-
-    const tags = [];
-    if (opp.AX사업여부) tags.push('<span class="badge-ax">AX</span>');
-    if (opp.중점고객여부) tags.push('<span class="badge-key">중점고객</span>');
-    if (opp.중점사업여부) tags.push('<span class="badge-key">중점사업</span>');
-    setEl('p2Tags', el => el.innerHTML = tags.join(''));
-
-    renderScorePanel(opp.score, null);
-    renderDealDetail(opp);
-
-    const maxQ = STAGE_MAX_Q[opp.stage] || 0;
-    setEl('stageQuotaInfo', el => el.textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화');
-
-    setEl('chatMessages', el => el.innerHTML = '');
-    setEl('previewArea', el => el.style.display = 'none');
-    setEl('btnUpdate', el => el.style.display = 'none');
-    setEl('dealInfoSection', el => el.style.display = 'none');
-    setEl('dealInfoToggleBtn', el => el.innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>');
-
-    loadActivityLog(opp.id);
-    loadCoachingNotes(opp);
-    if (sessionId !== S.dealSessionId) return;
-    await sendInitialGreeting(opp, sessionId);
+    if (cached) {
+      // 백그라운드 완료: 최신 데이터로 스코어 패널만 조용히 갱신
+      S.currentOpp = opp;
+      renderScorePanel(opp.score, null);
+      renderDealDetail(opp);
+      loadActivityLog(opp.id);
+    } else {
+      // 캐시 없이 처음 로드하는 경우 (폴백) — 전체 렌더
+      S.currentOpp = opp;
+      S.conversation = [];
+      S.evalResult = null;
+      S.pendingFile = null;
+      S.askedCount = 0;
+      S.meetingContext = null;
+      setEl('p2Title', el => el.textContent = opp.사업기회명);
+      const tags = [];
+      if (opp.AX사업여부) tags.push('<span class="badge-ax">AX</span>');
+      if (opp.중점고객여부) tags.push('<span class="badge-key">중점고객</span>');
+      if (opp.중점사업여부) tags.push('<span class="badge-key">중점사업</span>');
+      setEl('p2Tags', el => el.innerHTML = tags.join(''));
+      renderScorePanel(opp.score, null);
+      renderDealDetail(opp);
+      const maxQ = STAGE_MAX_Q[opp.stage] || 0;
+      setEl('stageQuotaInfo', el => el.textContent = maxQ > 0 ? `추가 질문 최대 ${maxQ}회` : '자유 대화');
+      setEl('chatMessages', el => el.innerHTML = '');
+      setEl('previewArea', el => el.style.display = 'none');
+      setEl('btnUpdate', el => el.style.display = 'none');
+      setEl('dealInfoSection', el => el.style.display = 'none');
+      setEl('dealInfoToggleBtn', el => el.innerHTML = '<span>사업기회 상세</span><span>펼치기 ▼</span>');
+      loadActivityLog(opp.id);
+      loadCoachingNotes(opp);
+      sendInitialGreeting(opp, sessionId);
+    }
   } catch(e) {
     console.error('딜 로딩 실패:', e);
   }

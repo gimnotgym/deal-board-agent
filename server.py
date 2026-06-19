@@ -1091,48 +1091,55 @@ async def update_meddpicc(req: UpdateRequest):
 
     # ── AI 대화 요약 생성 ──
     ai_title = ""
-    ai_summary = req.preview_text or ""
+    ai_summary = ""
     conv = req.conversation or []
-    if conv and len(conv) >= 2:
+    changed_names = [f"{c['name']}({c['code']})" for c in change_chips]
+    changed_str = ", ".join(changed_names) if changed_names else "없음"
+    score_change_lines = "\n".join(
+        f"- {c['name']}({c['code']}): {c['from']}점 → {c['to']}점"
+        for c in change_chips
+    ) if change_chips else "- 변경 없음"
+
+    # 입력 소스 구성 (대화 or 붙여넣은 텍스트 or 파일)
+    conv_text = "\n".join(
+        f"{'영업대표' if t.get('role')=='rep' else 'AI'}: {t.get('text','')[:300]}"
+        for t in conv[-20:]
+    ) if conv else ""
+    raw_input = req.input_text or ""
+    source_text = conv_text if conv_text else raw_input[:1500]
+
+    if source_text and ANTHROPIC_OK:
         try:
-            conv_text = "\n".join(
-                f"{'영업대표' if t.get('role')=='rep' else 'AI'}: {t.get('text','')}"
-                for t in conv[-20:]  # 최근 20턴
-            )
-            changed_names = [f"{c['name']}({c['code']})" for c in change_chips]
-            changed_str = ", ".join(changed_names) if changed_names else "없음"
-            sum_prompt = f"""다음은 영업대표와 AI 영업 어시스턴트 간의 딜 업데이트 대화입니다.
+            sum_prompt = f"""영업대표가 딜 관련 정보를 입력했습니다. 아래 내용을 바탕으로 활동 이력을 작성하세요.
+
 딜명: {opp.get('사업기회명','')} / 고객사: {opp.get('고객사명','')}
-이번에 변경된 MEDDPICC 항목: {changed_str}
+입력 내용:
+{source_text}
 
-[대화 내용]
-{conv_text}
+이번 업데이트로 변경된 MEDDPICC 점수:
+{score_change_lines}
 
-위 대화를 바탕으로 아래 두 가지를 JSON으로 반환하세요.
-1. title: 이번 업데이트를 한 줄로 표현 (예: "CTO 통화 — 결정절차·챔피언 확인", "회의록 분석 — 예산·평가기준 파악") 15자 이내
-2. summary: 이번 대화에서 파악된 핵심 내용 3~5줄. 각 줄은 "- "로 시작. 사실 중심으로 간결하게.
-
-반드시 아래 형식으로만 답하세요:
-{{"title": "...", "summary": "- ...\n- ...\n- ..."}}"""
-
+아래 JSON 형식으로만 답하세요:
+{{
+  "title": "날짜없이 핵심만 (예: CTO 통화 — 결정절차·챔피언 확인) 20자 이내",
+  "summary": "- 파악된 핵심사실 1\n- 파악된 핵심사실 2\n- 파악된 핵심사실 3\n[스코어 변경] {changed_str}"
+}}"""
             resp = anthropic_client.messages.create(
                 model="claude-3-5-haiku-20241022",
                 max_tokens=400,
                 messages=[{"role": "user", "content": sum_prompt}]
             )
-            raw = resp.content[0].text.strip()
-            # JSON 파싱
             import json as _json
-            parsed = _json.loads(raw)
+            parsed = _json.loads(resp.content[0].text.strip())
             ai_title = parsed.get("title", "")
-            ai_summary = parsed.get("summary", req.preview_text or "")
+            ai_summary = parsed.get("summary", "")
         except Exception:
-            # 요약 실패 시 기존 preview_text 사용
-            ai_title = fname if fname else "대화 업데이트"
-            ai_summary = req.preview_text or ""
+            pass
 
     if not ai_title:
         ai_title = fname if fname else ("대화 업데이트" if conv else "메모 입력")
+    if not ai_summary:
+        ai_summary = score_change_lines
 
     activity = load("activity_log")
     if not isinstance(activity, list):

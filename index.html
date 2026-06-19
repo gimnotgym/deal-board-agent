@@ -1961,7 +1961,9 @@ async function loadActivityLog(oppId) {
     body.innerHTML = items.map((it, idx) => {
       const icon = it.source === 'file' ? '📎' : '💬';
       const title = escHtml(it.title || (it.source === 'file' ? (it.filename || '첨부 파일') : '대화 업데이트'));
-      const summary = escHtml(it.summary || it.preview || '');
+      const rawSummary = it.summary || it.preview || '';
+      const summary = rawSummary.split('\n').map(l => escHtml(l.trim())).filter(Boolean)
+        .map(l => `<div style="margin-bottom:2px">${l}</div>`).join('');
       const chips = (it.changes || []).map(c => {
         const dir = c.to > c.from ? '▲' : '▼';
         const col = c.to > c.from ? '#6B4FBB' : '#E57373';
@@ -1970,15 +1972,16 @@ async function loadActivityLog(oppId) {
       const timeStr = fmtLogTime(it.timestamp);
       const bodyId = `act-body-${idx}`;
       const caretId = `act-caret-${idx}`;
+      const isFirst = idx === 0;
 
       return `<div class="activity-item">
         <div class="activity-item-head" onclick="toggleActItem('${bodyId}','${caretId}')">
           <span style="font-size:13px">${icon}</span>
           <span class="activity-item-title">${title}</span>
           <span class="activity-item-time">${timeStr}</span>
-          <span class="activity-item-caret" id="${caretId}">▶</span>
+          <span class="activity-item-caret" id="${caretId}">${isFirst ? '▼' : '▶'}</span>
         </div>
-        <div class="activity-item-body" id="${bodyId}">
+        <div class="activity-item-body" id="${bodyId}" style="${isFirst ? '' : 'display:none'}">
           ${summary ? `<div class="activity-item-summary">${summary}</div>` : ''}
           ${chips ? `<div class="activity-item-chips">${chips}</div>` : ''}
         </div>

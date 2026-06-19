@@ -980,6 +980,7 @@ const S = {
   execOpps: [],
   conflictTarget: null,
   meetingContext: null,
+  dealSessionId: 0,
 };
 
 const MEDDPICC_NAMES = {E:'예산 집행 권한',C:'내부 추진자',M:'기대 성과',DC:'평가 기준',DP:'결정 절차',PP:'계약 절차',I:'핵심 Pain',CO:'경쟁 현황'};
@@ -1648,8 +1649,10 @@ function showMoreRepDeals() {
 
 // ── Page 2: Deal Detail ──
 async function openDeal(oppId) {
+  const sessionId = ++S.dealSessionId;
   try {
     const opp = await api('GET', `/api/opportunities/${oppId}`);
+    if (sessionId !== S.dealSessionId) return;
     S.currentOpp = opp;
     S.conversation = [];
     S.evalResult = null;
@@ -1684,7 +1687,8 @@ async function openDeal(oppId) {
 
     loadActivityLog(opp.id);
     loadCoachingNotes(opp);
-    await sendInitialGreeting(opp);
+    if (sessionId !== S.dealSessionId) return;
+    await sendInitialGreeting(opp, sessionId);
   } catch(e) {
     console.error('딜 로딩 실패:', e);
   }
@@ -1743,7 +1747,8 @@ function renderScorePanel(score, oldScore) {
   });
 }
 
-async function sendInitialGreeting(opp) {
+async function sendInitialGreeting(opp, sessionId) {
+  if (sessionId !== S.dealSessionId) return;
   // 점수 진단형 인사말 — 빈 딜에서 무엇을 채우면 점수가 오르는지 짚어준다 (결정론적)
   const s = opp.score || {};
   const sf = s.strategic_fit || 0;

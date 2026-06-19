@@ -98,11 +98,13 @@ nav {
 .feature-card:hover::after { opacity: 1; }
 .feature-card:hover .tag { color: var(--accent); border-color: rgba(167,139,250,.25); background: rgba(107,79,187,.08); }
 .feature-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(107,79,187,.18); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 20px; }
+.feature-card-inner { display: flex; gap: 20px; align-items: flex-start; }
+.feature-card-body { flex: 1; min-width: 0; }
 .feature-role { font-size: 22px; font-weight: 800; color: var(--text1); margin-bottom: 6px; letter-spacing: -.3px; }
 .feature-title { font-size: 13px; font-weight: 500; color: var(--accent); margin-bottom: 12px; }
-.feature-desc { font-size: 13px; color: var(--text2); line-height: 1.75; margin-bottom: 18px; }
-.feature-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag { font-size: 11px; color: var(--text3); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 20px; padding: 3px 11px; transition: color .2s, border-color .2s, background .2s; }
+.feature-desc { font-size: 13px; color: var(--text2); line-height: 1.75; }
+.feature-tags { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; padding-top: 2px; }
+.tag { font-size: 11px; color: var(--text2); background: rgba(167,139,250,.08); border: 1px solid rgba(167,139,250,.2); border-radius: 20px; padding: 4px 12px; transition: color .2s, border-color .2s, background .2s; white-space: nowrap; text-align: center; }
 
 /* ───── 3. 스코어링 ───── */
 .scoring-section { background: var(--card); border-top: 1px solid var(--border); min-height: unset !important; padding: 44px 80px 80px !important; scroll-margin-top: 60px; }
@@ -253,28 +255,44 @@ nav {
     <p class="s-sub">모두가 하나의 플랫폼에서 영업정보를 실시간 확인, 협업합니다.</p>
     <div class="feature-grid">
       <div class="feature-card">
-        <div class="feature-role">영업대표</div>
-        <div class="feature-title">영업 방식 그대로, 데이터로 진화</div>
-        <div class="feature-desc">고객과 나눈 대화와 회의록을 자연어로 입력하면 AI가 핵심을 추출해 정량 점수로 전환합니다. 좋은 딜의 기준이 생기고, 그 기준에 맞춰 다음 영업 액션을 스스로 발전시킬 수 있습니다.</div>
-        <div class="feature-tags"><span class="tag">자연어 분석</span><span class="tag">Deal Score</span><span class="tag">AI 액션 제안</span><span class="tag">아젠다 수신</span></div>
+        <div class="feature-card-inner">
+          <div class="feature-card-body">
+            <div class="feature-role">영업대표</div>
+            <div class="feature-title">영업 방식 그대로, 데이터로 진화</div>
+            <div class="feature-desc">고객과 나눈 대화와 회의록을 자연어로 입력하면 AI가 핵심을 추출해 정량 점수로 전환합니다. 좋은 딜의 기준이 생기고, 그 기준에 맞춰 다음 영업 액션을 스스로 발전시킬 수 있습니다.</div>
+          </div>
+          <div class="feature-tags"><span class="tag">자연어 분석</span><span class="tag">Deal Score</span><span class="tag">AI 액션 제안</span><span class="tag">아젠다 수신</span></div>
+        </div>
       </div>
       <div class="feature-card">
-        <div class="feature-role">영업리더</div>
-        <div class="feature-title">팀 전체 딜을 즉시 파악, 즉각 지시</div>
-        <div class="feature-desc">수십 개의 파이프라인 상세 내용을 한 화면에서 즉시 파악합니다. 딜별 진행 현황과 리스크를 AI가 자동 요약해 주기 때문에 리더는 보고를 기다릴 필요 없이 바로 Next Action을 지시할 수 있습니다.</div>
-        <div class="feature-tags"><span class="tag">팀 파이프라인</span><span class="tag">AI 딜 요약</span><span class="tag">Next Action 지시</span><span class="tag">아젠다 Push</span></div>
+        <div class="feature-card-inner">
+          <div class="feature-card-body">
+            <div class="feature-role">영업리더</div>
+            <div class="feature-title">팀 전체 딜을 즉시 파악, 즉각 지시</div>
+            <div class="feature-desc">수십 개의 파이프라인 상세 내용을 한 화면에서 즉시 파악합니다. 딜별 진행 현황과 리스크를 AI가 자동 요약해 주기 때문에 리더는 보고를 기다릴 필요 없이 바로 Next Action을 지시할 수 있습니다.</div>
+          </div>
+          <div class="feature-tags"><span class="tag">팀 파이프라인</span><span class="tag">AI 딜 요약</span><span class="tag">Next Action 지시</span><span class="tag">아젠다 Push</span></div>
+        </div>
       </div>
       <div class="feature-card">
-        <div class="feature-role">사업부문장</div>
-        <div class="feature-title">전사 파이프라인 의사결정</div>
-        <div class="feature-desc">목표 달성 추정과 수주 Gap을 즉시 파악하고, Gap을 메울 후보 Lead와 단계별 주요 딜을 AI가 임원 관점에서 자동 정리해 보고합니다.</div>
-        <div class="feature-tags"><span class="tag">목표 달성 추정</span><span class="tag">Gap 후보 Lead</span><span class="tag">단계별 주요 딜</span><span class="tag">파이프라인 Waterfall</span></div>
+        <div class="feature-card-inner">
+          <div class="feature-card-body">
+            <div class="feature-role">사업부문장</div>
+            <div class="feature-title">전사 파이프라인 의사결정</div>
+            <div class="feature-desc">목표 달성 추정과 수주 Gap을 즉시 파악하고, Gap을 메울 후보 Lead와 단계별 주요 딜을 AI가 임원 관점에서 자동 정리해 보고합니다.</div>
+          </div>
+          <div class="feature-tags"><span class="tag">목표 달성 추정</span><span class="tag">Gap 후보 Lead</span><span class="tag">단계별 주요 딜</span><span class="tag">파이프라인 Waterfall</span></div>
+        </div>
       </div>
       <div class="feature-card">
-        <div class="feature-role">관리자</div>
-        <div class="feature-title">생성형 AI 품질 관리 · 고도화</div>
-        <div class="feature-desc">Few-shot 예시 등록과 충돌 로그 검토를 통해 AI 분석 품질을 지속 개선합니다. 회사의 의사결정 방향에 맞게 프롬프트를 수정하고, 영업대표의 수정 피드백이 시스템에 반영되는 Self-evolving 구조를 관리합니다.</div>
-        <div class="feature-tags"><span class="tag">수주 상관분석</span><span class="tag">가중치 슬라이더</span><span class="tag">점수 분포 시각화</span></div>
+        <div class="feature-card-inner">
+          <div class="feature-card-body">
+            <div class="feature-role">관리자</div>
+            <div class="feature-title">생성형 AI 품질 관리 · 고도화</div>
+            <div class="feature-desc">Few-shot 예시 등록과 충돌 로그 검토를 통해 AI 분석 품질을 지속 개선합니다. 회사의 의사결정 방향에 맞게 프롬프트를 수정하고, 영업대표의 수정 피드백이 시스템에 반영되는 Self-evolving 구조를 관리합니다.</div>
+          </div>
+          <div class="feature-tags"><span class="tag">수주 상관분석</span><span class="tag">가중치 슬라이더</span><span class="tag">점수 분포 시각화</span></div>
+        </div>
       </div>
     </div>
   </div>

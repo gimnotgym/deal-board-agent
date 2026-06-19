@@ -2045,22 +2045,24 @@ function showPreview(evalResult, inputText) {
     return `<div class="preview-item"><span class="${cls}">${dir}</span><span><strong>${name}</strong> ${c.from}점 → ${c.to}점</span></div>${basisHtml}`;
   }).join('');
 
-  previewArea.innerHTML = `
-    <div class="preview-card">
-      <div class="preview-title">📋 오늘 확인된 내용</div>
-      ${previewText ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${previewText}</div>` : ''}
-      ${items}
-    </div>
+  // 채팅 버블 안에 인라인으로 표시
+  const bubbleId = `preview-bubble-${Date.now()}`;
+  const html = `
+    <div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${previewText ? escHtml(previewText) : '아래 항목에서 변경사항을 확인했습니다.'}</div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px">${items}</div>
+    <button onclick="doUpdate('${bubbleId}')" id="btn-inline-update" style="background:#111;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%">✓ 오늘 내용 업데이트 하기</button>
   `;
-  previewArea.style.display = 'block';
-  document.getElementById('btnUpdate').style.display = 'block';
+  addMsg('agent', html, 'preview-inline');
+  S._previewBubbleId = bubbleId;
+
+  previewArea.style.display = 'none';
+  document.getElementById('btnUpdate').style.display = 'none';
 }
 
 async function doUpdate() {
   if (!S.evalResult || !S.currentOpp) return;
-  const btn = document.getElementById('btnUpdate');
-  btn.disabled = true;
-  btn.textContent = '업데이트 중...';
+  const btn = document.getElementById('btn-inline-update') || document.getElementById('btnUpdate');
+  if (btn) { btn.disabled = true; btn.textContent = '업데이트 중...'; }
 
   try {
     const oldScore = S.currentOpp.score;
@@ -2084,6 +2086,8 @@ async function doUpdate() {
       renderDealDetail(S.currentOpp);
       document.getElementById('previewArea').style.display = 'none';
       btn.style.display = 'none';
+      const inlineBtn = document.getElementById('btn-inline-update');
+      if (inlineBtn) { inlineBtn.textContent = `✓ 완료 — ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점`; inlineBtn.style.background = '#5A3B99'; }
       addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점.`);
 
       // 목록 행 점수 즉시 업데이트

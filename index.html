@@ -572,6 +572,16 @@ function ensurePdfjs(cb) {
             <table class="info-table" id="dealInfoTable"></table>
           </div>
         </div>
+
+        <!-- 활동 이력 (왼쪽 패널) -->
+        <div id="activityLog" style="display:none;padding:10px 20px;border-top:1px solid #F0F0EF">
+          <button class="activity-log-toggle" onclick="toggleActivityLog()" style="width:100%;display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text2);padding:0">
+            <span id="activityLogCaret">▶</span>
+            <span>📋 활동 이력</span>
+            <span id="activityLogCount" class="activity-log-count" style="margin-left:auto"></span>
+          </button>
+          <div id="activityLogBody" style="display:none;margin-top:8px;max-height:240px;overflow-y:auto"></div>
+        </div>
       </div>
 
       <!-- Right: Agent Chat -->
@@ -582,14 +592,6 @@ function ensurePdfjs(cb) {
             <div style="font-weight:600;font-size:13px">Sales Assistant</div>
           </div>
           <div style="margin-left:auto;font-size:11px;color:var(--text3)" id="stageQuotaInfo"></div>
-        </div>
-        <div id="activityLog" class="activity-log" style="display:none">
-          <button class="activity-log-toggle" onclick="toggleActivityLog()">
-            <span id="activityLogCaret">▶</span>
-            <span>📋 활동 히스토리</span>
-            <span id="activityLogCount" class="activity-log-count"></span>
-          </button>
-          <div id="activityLogBody" class="activity-log-body" style="display:none"></div>
         </div>
         <!-- 리더의 코칭 메모 섹션 -->
         <div id="coachingNotesSection" style="display:none;background:#F8F4FF;border:1px solid #E0D8F5;border-radius:6px;padding:12px;margin-bottom:12px;">

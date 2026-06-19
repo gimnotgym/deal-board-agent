@@ -1137,7 +1137,7 @@ async def update_meddpicc(req: UpdateRequest):
     activity = load("activity_log")
     if not isinstance(activity, list):
         activity = []
-    activity.append({
+    activity_entry = {
         "id": f"ACT-{len(activity)+1:04d}",
         "timestamp": datetime.now().isoformat(),
         "opp_id": req.opp_id,
@@ -1147,8 +1147,17 @@ async def update_meddpicc(req: UpdateRequest):
         "title": ai_title,
         "summary": ai_summary,
         "changes": change_chips,
-    })
+    }
+    activity.append(activity_entry)
     save("activity_log", activity)
+
+    # 활동성 점수 계산에 쓰이는 embedded activity_log도 동기화
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if "activity_log" not in opps[idx] or not isinstance(opps[idx]["activity_log"], list):
+        opps[idx]["activity_log"] = []
+    opps[idx]["activity_log"].append({"date": today_str, "type": "meddpicc_update"})
+    save("opportunities", opps)
+    cache_clear()
 
     closed_deals = load("closed_deals")
     return {"success": True, "score": calc_deal_score(opps[idx], closed_deals)}

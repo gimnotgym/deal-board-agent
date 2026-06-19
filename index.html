@@ -563,6 +563,15 @@ function ensurePdfjs(cb) {
           <div id="nextActionList" style="display:flex;flex-direction:column;gap:5px"></div>
         </div>
 
+        <!-- 활동 이력 — 항상 표시 -->
+        <div id="activityLog" style="padding:12px 20px;border-top:1px solid #F0F0EF">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;color:#6B4FBB">📋 활동 이력</span>
+            <span id="activityLogCount" style="font-size:10px;color:var(--text3);margin-left:auto"></span>
+          </div>
+          <div id="activityLogBody" style="max-height:220px;overflow-y:auto"></div>
+        </div>
+
         <!-- Info toggle -->
         <div style="padding:10px 20px;border-top:1px solid #F0F0EF">
           <button onclick="toggleDealInfo()" id="dealInfoToggleBtn" style="width:100%;display:flex;justify-content:space-between;font-size:12px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0">
@@ -571,16 +580,6 @@ function ensurePdfjs(cb) {
           <div id="dealInfoSection" style="display:none;margin-top:8px">
             <table class="info-table" id="dealInfoTable"></table>
           </div>
-        </div>
-
-        <!-- 활동 이력 (왼쪽 패널) -->
-        <div id="activityLog" style="display:none;padding:10px 20px;border-top:1px solid #F0F0EF">
-          <button class="activity-log-toggle" onclick="toggleActivityLog()" style="width:100%;display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text2);padding:0">
-            <span id="activityLogCaret">▶</span>
-            <span>📋 활동 이력</span>
-            <span id="activityLogCount" class="activity-log-count" style="margin-left:auto"></span>
-          </button>
-          <div id="activityLogBody" style="display:none;margin-top:8px;max-height:240px;overflow-y:auto"></div>
         </div>
       </div>
 
@@ -1989,12 +1988,10 @@ async function loadActivityLog(oppId) {
     if (!res.ok) throw new Error('log fetch failed');
     const data = await res.json();
     const items = data.items || [];
-    panel.style.display = 'block';
     countEl.textContent = items.length ? `${items.length}건` : '';
 
     if (!items.length) {
-      body.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px 0">업데이트 후 기록이 표시됩니다.</div>';
-      body.style.display = 'block';
+      body.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">업데이트 후 기록이 표시됩니다.</div>';
       return;
     }
 

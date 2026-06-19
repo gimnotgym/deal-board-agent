@@ -2149,11 +2149,13 @@ async function doUpdate() {
       if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 100);
     }
   } catch(e) {
-    addMsg('agent', '업데이트 중 오류가 발생했습니다.');
+    console.error('[doUpdate] 오류:', e);
+    addMsg('agent', `업데이트 중 오류가 발생했습니다. (${e?.message || e})`);
+    if (btn) { btn.disabled = false; btn.textContent = '✓ 오늘 내용 업데이트 하기'; }
+    return;
   }
 
-  btn.disabled = false;
-  btn.textContent = '✓ 오늘 내용 업데이트 하기';
+  if (btn) { btn.disabled = false; btn.textContent = '✓ 오늘 내용 업데이트 하기'; }
 }
 
 function openNewDealModal() {

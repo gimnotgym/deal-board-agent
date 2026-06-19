@@ -1167,11 +1167,12 @@ async def update_meddpicc(req: UpdateRequest):
         opps[idx]["activity_log"] = []
     opps[idx]["activity_log"].append({"date": today_str, "type": "meddpicc_update"})
     save("opportunities", opps)
-    # 업데이트된 딜 즉시 재캐싱
+    # 업데이트된 딜 즉시 재캐싱 (파이프라인 캐시만 무효화)
     closed_deals = load("closed_deals")
     opps[idx]["score"] = calc_deal_score(opps[idx], closed_deals)
     cache_set(f"opp_{req.opp_id}", opps[idx])
-    cache_clear(req.opp_id)  # 파이프라인 캐시만 무효화
+    for k in [k for k in _cache if k.startswith("pipeline_") or k.startswith("opps_")]:
+        _cache.pop(k, None)
     return {"success": True, "score": opps[idx]["score"]}
 
 # ── 회의록 분석 API ──

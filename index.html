@@ -1935,7 +1935,7 @@ async function evaluateAndChat(inputText) {
     ]);
 
     removeTyping();
-    S.evalResult = evalRes;
+    S.evalResult = { ...evalRes, recommended_stage: evalRes.recommended_stage || null };
     S.pendingFile = null;  // 텍스트 입력 경로 — 파일 분기 비활성화
 
     if (chatRes.reply) {
@@ -1989,10 +1989,14 @@ async function loadActivityLog(oppId) {
     if (!res.ok) throw new Error('log fetch failed');
     const data = await res.json();
     const items = data.items || [];
-    if (!items.length) { panel.style.display = 'none'; return; }
-
     panel.style.display = 'block';
-    countEl.textContent = `${items.length}건`;
+    countEl.textContent = items.length ? `${items.length}건` : '';
+
+    if (!items.length) {
+      body.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px 0">업데이트 후 기록이 표시됩니다.</div>';
+      body.style.display = 'block';
+      return;
+    }
 
     body.innerHTML = items.map((it, idx) => {
       const icon = it.source === 'file' ? '📎' : '💬';
@@ -2086,10 +2090,18 @@ function showPreview(evalResult, inputText) {
     return `<div class="preview-item"><span class="${cls}">${dir}</span><span><strong>${name}</strong> ${c.from}점 → ${c.to}점</span></div>${basisHtml}`;
   }).join('');
 
+  // stage 변경 칩
+  const stageHtml = evalResult.recommended_stage
+    ? `<div style="margin-bottom:12px;padding:8px 10px;background:#FFF3CD;border-radius:6px;font-size:12px;color:#856404">
+        📌 Stage 변경 제안: <strong>${escHtml(S.currentOpp?.stage || '')} → ${escHtml(evalResult.recommended_stage)}</strong>
+      </div>`
+    : '';
+
   // 채팅 버블 안에 인라인으로 표시
   const bubbleId = `preview-bubble-${Date.now()}`;
   const html = `
     <div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${previewText ? escHtml(previewText) : '아래 항목에서 변경사항을 확인했습니다.'}</div>
+    ${stageHtml}
     <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px">${items}</div>
     <button onclick="doUpdate('${bubbleId}')" id="btn-inline-update" style="background:#111;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%">✓ 오늘 내용 업데이트 하기</button>
   `;
@@ -2118,11 +2130,27 @@ async function doUpdate() {
       input_text: inputText,
       preview_text: S.evalResult.preview_text || '',
       conversation: S.conversation || [],
+      new_stage: S.evalResult.recommended_stage || '',
     });
 
     if (res.success) {
       S.currentOpp.meddpicc = S.evalResult.scores;
       S.currentOpp.score = res.score;
+
+      // Stage 변경 반영
+      const newStage = S.evalResult.recommended_stage;
+      if (newStage && newStage !== S.currentOpp.stage) {
+        const oldStage = S.currentOpp.stage;
+        S.currentOpp.stage = newStage;
+        // S.opps 목록도 동기화
+        const oppInList = (S.opps || []).find(o => o.id === S.currentOpp.id);
+        if (oppInList) oppInList.stage = newStage;
+        // 목록 행 stage 뱃지 갱신
+        const row = document.getElementById(`row-${S.currentOpp.id}`);
+        if (row) { const stageCell = row.querySelector('.stage-badge'); if (stageCell) stageCell.textContent = newStage; }
+        addMsg('agent', `Stage를 <strong>${escHtml(oldStage)} → ${escHtml(newStage)}</strong>으로 변경했습니다.`);
+      }
+
       renderScorePanel(res.score, oldScore);
       renderDealDetail(S.currentOpp);
       document.getElementById('previewArea').style.display = 'none';

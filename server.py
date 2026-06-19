@@ -396,8 +396,19 @@ E:{current.get('E',0)} C:{current.get('C',0)} M:{current.get('M',0)} DC:{current
   "champion_type": "Type1 실무추진자 또는 Type2 정보제공자 또는 Type3 정치적지지자 또는 null",
   "champion_risk": "리스크 내용 또는 null",
   "preview_text": "오늘 확인된 내용 자연어 요약 (점수 숫자 언급 금지)",
-  "next_action": "다음에 확인하면 좋을 것 한 가지 (자연어)"
-}}"""
+  "next_action": "다음에 확인하면 좋을 것 한 가지 (자연어)",
+  "recommended_stage": null
+}}
+
+## Stage 변경 규칙 (recommended_stage)
+- 기본값 null (변경 불필요)
+- 딜 취소·철회·포기·탈락·탈락통보 → "Deselected"
+- 계약 완료·서명·수주 확정 → "계약완료"
+- 우선협상대상자 선정 → "우선협상"
+- 제안서 제출·PT 완료 → "Negotiated"
+- 예산+의사결정자+Pain 모두 확인 → "Qualified"
+- 현재 stage보다 하향이 명확할 때만 추천 (승격은 보수적으로)
+- stage 목록: Lead, Identified, Validated, Qualified, Negotiated, 우선협상, 계약완료, Deselected"""
 
     return sys_prompt, user_prompt
 
@@ -1005,7 +1016,8 @@ class UpdateRequest(BaseModel):
     input_text: str
     llm_scores: dict
     preview_text: str = ""
-    conversation: list = []   # 대화 전체 [{role, text}, ...]
+    conversation: list = []
+    new_stage: str = ""   # 추천 stage 변경 (빈 문자열이면 유지)
 
 @app.post("/api/meddpicc/update")
 async def update_meddpicc(req: UpdateRequest):
@@ -1045,6 +1057,14 @@ async def update_meddpicc(req: UpdateRequest):
 
     # 업데이트 적용
     opps[idx]["meddpicc"] = req.scores
+    # Stage 변경
+    VALID_STAGES = {"Lead","Identified","Validated","Qualified","Negotiated","우선협상","계약완료","Deselected"}
+    old_stage = opps[idx].get("stage", "")
+    stage_changed = False
+    if req.new_stage and req.new_stage in VALID_STAGES and req.new_stage != old_stage:
+        opps[idx]["stage"] = req.new_stage
+        opps[idx]["stage_days"] = 0
+        stage_changed = True
     # 진행사항 업데이트 — 변경된 항목을 간결히 누적 (긴 요약 전체는 넣지 않음)
     _names = {"E": "예산 집행 권한", "C": "내부 추진자", "M": "기대 성과",
               "DC": "평가 기준", "DP": "결정 절차", "PP": "계약 절차",

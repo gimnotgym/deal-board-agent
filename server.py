@@ -64,21 +64,16 @@ app = FastAPI(title="Deal Board Agent", version="1.0.0")
 
 @app.on_event("startup")
 async def init_data():
-    """data/ 폴더와 기본 파일이 없으면 자동 생성"""
+    """data/ 폴더가 없거나 파일이 없으면 data_seed/에서 복사"""
+    import shutil
     DATA.mkdir(exist_ok=True)
-    defaults = {
-        "opportunities": [], "closed_deals": [], "reps": [],
-        "accounts": [], "activity_log": [], "agenda_log": [],
-        "conflict_log": [], "conversation_log": [], "history": [],
-        "meddpicc_weights": {
-            "M":1.5,"E":2.0,"DC":1.5,"DP":1.5,"I":1.5,"C":2.0,"PP":1.0,"CO":1.0
-        },
-    }
-    for name, default in defaults.items():
-        p = DATA / f"{name}.json"
-        if not p.exists():
-            with open(p, "w", encoding="utf-8") as f:
-                json.dump(default, f, ensure_ascii=False, indent=2)
+    SEED = BASE / "data_seed"
+    if SEED.exists():
+        for seed_file in SEED.glob("*.json"):
+            target = DATA / seed_file.name
+            if not target.exists():
+                shutil.copy2(seed_file, target)
+                print(f"[startup] seed 복사: {seed_file.name}")
     print("[startup] data/ 초기화 완료")
 
 @app.on_event("startup")

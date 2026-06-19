@@ -1174,12 +1174,14 @@ function stageAlert(opp) {
   return '';
 }
 
-function addMsg(role, text, extra='') {
+function addMsg(role, text, extraClass='') {
   const msgs = document.getElementById('chatMessages');
+  if (!msgs) return null;
   const wrap = document.createElement('div');
   wrap.className = `msg-wrap ${role === 'user' ? 'user' : ''}`;
+  const bubbleClass = `msg-bubble agent${extraClass ? ' ' + extraClass : ''}`;
   const html = role === 'agent'
-    ? `<div class="agent-avatar-sm"></div><div class="msg-bubble agent">${text.replace(/\n/g,'<br>')}${extra}</div>`
+    ? `<div class="agent-avatar-sm"></div><div class="${bubbleClass}">${text.replace(/\n/g,'<br>')}</div>`
     : `<div class="msg-bubble user">${text.replace(/\n/g,'<br>')}</div>`;
   wrap.innerHTML = html;
   msgs.appendChild(wrap);
@@ -1982,7 +1984,7 @@ async function loadActivityLog(oppId) {
   const panel = document.getElementById('activityLog');
   const body = document.getElementById('activityLogBody');
   const countEl = document.getElementById('activityLogCount');
-  if (!panel) return;
+  if (!panel || !body) return;
   try {
     const res = await fetch(`/api/meeting/log/${oppId}`);
     if (!res.ok) throw new Error('log fetch failed');

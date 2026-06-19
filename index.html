@@ -2091,7 +2091,9 @@ function showPreview(evalResult, inputText) {
     const cls = c.direction === 'up' ? 'preview-up' : 'preview-down';
     const name = MEDDPICC_NAMES[c.item] || c.item;
     // 근거: evidence(원문 인용) → reason(LLM 근거) → rationale 순으로 우선
-    const basis = (c.evidence || '').trim() || (c.reason || '').trim() || (c.rationale || '').trim();
+    const rawBasis = ((c.evidence || '').trim() || (c.reason || '').trim() || (c.rationale || '').trim())
+      .replace(/^[■▪▶\-\s]+/, '').trim();  // 문서 헤더 기호 제거
+    const basis = rawBasis.length > 80 ? rawBasis.slice(0, 80) + '…' : rawBasis;
     const basisHtml = basis
       ? `<div style="font-size:11px;color:var(--text2);margin:2px 0 0 22px;line-height:1.5">└ 근거: ${escHtml(basis)}</div>`
       : '';

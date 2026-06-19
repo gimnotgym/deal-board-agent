@@ -1990,10 +1990,9 @@ function fmtLogTime(iso) {
 }
 
 async function loadActivityLog(oppId) {
-  const panel = document.getElementById('activityLog');
   const body = document.getElementById('activityLogBody');
   const countEl = document.getElementById('activityLogCount');
-  if (!panel || !body) return;
+  if (!body) return;
   try {
     const res = await fetch(`/api/meeting/log/${oppId}`);
     if (!res.ok) throw new Error('log fetch failed');

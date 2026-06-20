@@ -74,8 +74,9 @@ async def init_data():
     if SEED.exists():
         for seed_file in SEED.glob("*.json"):
             target = DATA / seed_file.name
-            shutil.copy2(seed_file, target)
-            print(f"[startup] seed 복사: {seed_file.name}")
+            if not target.exists():
+                shutil.copy2(seed_file, target)
+                print(f"[startup] seed 복사: {seed_file.name}")
     print("[startup] data/ 초기화 완료")
 
 @app.on_event("startup")

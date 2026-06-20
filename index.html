@@ -2005,6 +2005,7 @@ async function loadActivityLog(oppId) {
       return;
     }
 
+    let lastDate = '';
     body.innerHTML = items.map((it, idx) => {
       const icon = it.source === 'file' ? '📎' : '💬';
       const title = escHtml(it.title || (it.source === 'file' ? (it.filename || '첨부 파일') : '대화 업데이트'));
@@ -2021,7 +2022,15 @@ async function loadActivityLog(oppId) {
       const caretId = `act-caret-${idx}`;
       const isFirst = idx === 0;
 
-      return `<div class="activity-item">
+      // 날짜 구분선
+      const d = new Date(it.timestamp);
+      const dateKey = isNaN(d) ? '' : `${d.getFullYear()}.${d.getMonth()+1}.${String(d.getDate()).padStart(2,'0')}`;
+      const dateSep = (dateKey && dateKey !== lastDate)
+        ? `<div style="font-size:10px;font-weight:700;color:var(--text3);padding:10px 0 4px;border-top:${lastDate ? '1px solid #F0F0EF' : 'none'};margin-top:${lastDate ? '4px' : '0'}">${dateKey}</div>`
+        : '';
+      lastDate = dateKey;
+
+      return `${dateSep}<div class="activity-item">
         <div class="activity-item-head" onclick="toggleActItem('${bodyId}','${caretId}')">
           <span style="font-size:13px">${icon}</span>
           <span class="activity-item-title">${title}</span>
@@ -2148,16 +2157,15 @@ async function doUpdate() {
 
       // Stage 변경 반영
       const newStage = S.evalResult.recommended_stage;
+      let stageMsg = '';
       if (newStage && newStage !== S.currentOpp.stage) {
         const oldStage = S.currentOpp.stage;
         S.currentOpp.stage = newStage;
-        // S.opps 목록도 동기화
         const oppInList = (S.opps || []).find(o => o.id === S.currentOpp.id);
         if (oppInList) oppInList.stage = newStage;
-        // 목록 행 stage 뱃지 갱신
-        const row = document.getElementById(`row-${S.currentOpp.id}`);
-        if (row) { const stageCell = row.querySelector('.stage-badge'); if (stageCell) stageCell.textContent = newStage; }
-        addMsg('agent', `Stage를 <strong>${escHtml(oldStage)} → ${escHtml(newStage)}</strong>으로 변경했습니다.`);
+        const row2 = document.getElementById(`row-${S.currentOpp.id}`);
+        if (row2) { const stageCell = row2.querySelector('.stage-badge'); if (stageCell) stageCell.textContent = newStage; }
+        stageMsg = ` · Stage <strong>${escHtml(oldStage)} → ${escHtml(newStage)}</strong>`;
       }
 
       renderScorePanel(res.score, oldScore);
@@ -2166,7 +2174,7 @@ async function doUpdate() {
       btn.style.display = 'none';
       const inlineBtn = document.getElementById('btn-inline-update');
       if (inlineBtn) { inlineBtn.textContent = `✓ 완료 — ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점`; inlineBtn.style.background = '#5A3B99'; }
-      addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점.`);
+      addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점${stageMsg}.`);
 
       // 목록 행 점수 즉시 업데이트
       const row = document.getElementById(`row-${S.currentOpp.id}`);

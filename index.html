@@ -1416,7 +1416,7 @@ async function analyzeRepMeeting(file) {
       S.evalResult = {
         scores: newScores,
         changes: changes,
-        preview_text: result.summary,        // 로그·미리보기 요약에 첨부 내용 요약 사용
+        preview_text: '',   // 요약은 이미 fadeBubble로 표시됨 — 중복 방지
       };
       S.pendingFile = {name: file.name, summary: result.summary};
 
@@ -2128,25 +2128,37 @@ function showPreview(evalResult, inputText) {
       </div>`
     : '';
 
+  // 이전 미리보기 버튼 모두 비활성화
+  document.querySelectorAll('[data-update-btn]').forEach(b => {
+    b.disabled = true; b.textContent = '(이전 미리보기)'; b.style.background = '#ccc'; b.style.cursor = 'default';
+  });
+
   // 채팅 버블 안에 인라인으로 표시
   const bubbleId = `preview-bubble-${Date.now()}`;
+  const btnId = `update-btn-${Date.now()}`;
+  const headerHtml = previewText
+    ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${escHtml(previewText)}</div>`
+    : '';
   const html = `
-    <div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${previewText ? escHtml(previewText) : '아래 항목에서 변경사항을 확인했습니다.'}</div>
+    ${headerHtml}
     ${stageHtml}
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">반영될 항목</div>
     <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px">${items}</div>
-    <button onclick="doUpdate('${bubbleId}')" id="btn-inline-update" style="background:#111;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%">✓ 오늘 내용 업데이트 하기</button>
+    <button onclick="doUpdate('${bubbleId}','${btnId}')" id="${btnId}" data-update-btn="1" style="background:#111;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%">✓ 오늘 내용 업데이트 하기</button>
   `;
   addMsg('agent', html, 'preview-inline');
   S._previewBubbleId = bubbleId;
+  S._previewBtnId = btnId;
 
   previewArea.style.display = 'none';
   document.getElementById('btnUpdate').style.display = 'none';
 }
 
-async function doUpdate() {
+async function doUpdate(bubbleId, btnId) {
   if (!S.evalResult || !S.currentOpp) return;
-  const btn = document.getElementById('btn-inline-update') || document.getElementById('btnUpdate');
-  if (btn) { btn.disabled = true; btn.textContent = '업데이트 중...'; }
+  const btn = (btnId && document.getElementById(btnId))
+    || document.getElementById('btnUpdate');
+  if (btn) { btn.disabled = true; btn.textContent = '업데이트 중...'; btn.style.cursor = 'default'; }
 
   try {
     const oldScore = S.currentOpp.score;
@@ -2184,9 +2196,14 @@ async function doUpdate() {
       renderScorePanel(res.score, oldScore);
       renderDealDetail(S.currentOpp);
       document.getElementById('previewArea').style.display = 'none';
-      btn.style.display = 'none';
-      const inlineBtn = document.getElementById('btn-inline-update');
-      if (inlineBtn) { inlineBtn.textContent = `✓ 완료 — ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점`; inlineBtn.style.background = '#5A3B99'; }
+      // 모든 업데이트 버튼 완료 처리
+      document.querySelectorAll('[data-update-btn]').forEach(b => {
+        b.disabled = true;
+        b.textContent = `✓ 완료 — ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점`;
+        b.style.background = '#5A3B99';
+        b.style.cursor = 'default';
+      });
+      document.getElementById('btnUpdate').style.display = 'none';
       addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점${stageMsg}.`);
 
       // 목록 행 점수 즉시 업데이트

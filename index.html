@@ -1525,6 +1525,17 @@ async function loadRepView() {
     S.opps = opps;
     renderNotes(opps, agendas);
     renderRepDealList(opps);
+
+    // 딜 상세 패널이 열려 있으면 최신 점수로 조용히 재동기화
+    const p2 = document.getElementById('rep-p2');
+    if (p2 && p2.style.display !== 'none' && S.currentOpp) {
+      const fresh = opps.find(o => o.id === S.currentOpp.id);
+      if (fresh && fresh.score) {
+        S.currentOpp = fresh;
+        renderScorePanel(fresh.score, null);
+        renderDealDetail(fresh);
+      }
+    }
   } catch(e) { console.error(e); }
 }
 

@@ -1326,16 +1326,21 @@ async def meeting_chat(req: MeetingChatRequest):
                      "구체적인 수치나 의사결정 구조를 더 말씀해 주시면 점수에 반영하겠습니다.")
         return {"reply": reply}
 
+    # meeting_text가 너무 길면 앞 3000자만 사용
+    if len(req.meeting_text) > 3000:
+        truncated = req.meeting_text[:3000] + "\n...(이하 생략)"
+        user_prompt = f'회의록:\n"""{truncated}"""\n\n질문: {req.question}'
+
     try:
         resp = _client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1000,
-            temperature=0.2,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=800,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
         reply = resp.content[0].text
-    except Exception:
+    except Exception as e:
+        import traceback; traceback.print_exc()
         reply = "답변 생성 중 오류가 발생했습니다. 다시 시도해 주세요."
 
     return {"reply": reply}

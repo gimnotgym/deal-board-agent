@@ -3006,11 +3006,10 @@ function renderExecBriefingCard(res) {
   const gapAmt = gap.gap || 0;
 
   // ── Section 2: Gap 극복 위한 후보 Lead ────────────────────
-  // 가중 파이프라인에 이미 포함된 단계(계약완료·우선협상·Negotiated·Deselected) 제외
-  // → 아직 목표 달성 계산에 안 들어간 잠재딜만 표시
-  const EXCLUDED_FOR_GAP = new Set(['계약완료','우선협상','Negotiated','Deselected']);
+  // Lead / Identified 단계만 — 아직 파이프라인에 본격 포함 안 된 잠재딜
+  const GAP_STAGES = new Set(['Lead','Identified','Identified-Remind','Identified-Registered']);
   const gapCandidates = all
-    .filter(o => !EXCLUDED_FOR_GAP.has(o.stage))
+    .filter(o => GAP_STAGES.has(o.stage))
     .sort((a,b) => {
       const scoreA = (a.수주확도||0) * 0.6 + (a.수주목표액||0) * 0.4 / 100;
       const scoreB = (b.수주확도||0) * 0.6 + (b.수주목표액||0) * 0.4 / 100;

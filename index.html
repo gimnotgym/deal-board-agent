@@ -1124,11 +1124,14 @@ function wpDetailHtml(opp) {
 function renderDealDetail(opp) {
   if (!opp) return;
   const medd = opp.meddpicc || {};
-  document.getElementById('sfDetail').innerHTML = sfDetailHtml(opp);
-  document.getElementById('dqDetail').innerHTML = meddpiccRowsHtml(medd);
-  document.getElementById('wpDetail').innerHTML = wpDetailHtml(opp);
+  const _set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  _set('sfDetail', sfDetailHtml(opp));
+  _set('dqDetail', meddpiccRowsHtml(medd));
+  _set('wpDetail', wpDetailHtml(opp));
   const dBid = daysTo(opp.입찰일);
-  document.getElementById('dealInfoTable').innerHTML = `
+  const dealInfoEl = document.getElementById('dealInfoTable');
+  if (!dealInfoEl) return;
+  dealInfoEl.innerHTML = `
     <tr><td>Stage</td><td>${stageBadge(opp.stage)}</td></tr>
     <tr><td>사업유형</td><td>${bizTag(opp.사업유형)}</td></tr>
     <tr><td>수주목표액</td><td><strong>${fmtAmt(opp.수주목표액)}억원</strong></td></tr>

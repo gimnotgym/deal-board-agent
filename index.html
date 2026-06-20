@@ -1889,7 +1889,7 @@ async function sendChat() {
       // 영업대표의 자연어 답변을 재평가해 변동분을 미리보기에 누적
       try {
         const reEval = await api('POST', '/api/meddpicc/evaluate',
-          {opp_id: S.currentOpp.id, input_text: msg});
+          {opp_id: S.currentOpp.id, input_text: msg, conversation: S.conversation});
         const newChanges = (reEval.changes || []).filter(c => (c.evidence||'').trim() || (c.reason||'').trim());
         if (newChanges.length > 0) {
           // 기존 미리보기(S.evalResult)에 누적
@@ -1939,7 +1939,7 @@ async function sendChat() {
 async function evaluateAndChat(inputText) {
   try {
     const [evalRes, chatRes] = await Promise.all([
-      api('POST', '/api/meddpicc/evaluate', {opp_id: S.currentOpp.id, input_text: inputText}),
+      api('POST', '/api/meddpicc/evaluate', {opp_id: S.currentOpp.id, input_text: inputText, conversation: S.conversation}),
       api('POST', '/api/chat', {opp_id: S.currentOpp.id, message: inputText, conversation: S.conversation}),
     ]);
 

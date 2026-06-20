@@ -328,7 +328,7 @@ STAGE_MAX_QUESTIONS = {
     "Qualified": 3, "Negotiated": 3, "우선협상": 2, "계약완료": 0,
 }
 
-def build_meddpicc_prompt(opp: dict, new_input: str, fewshots: list) -> str:
+def build_meddpicc_prompt(opp: dict, new_input: str, fewshots: list, conversation: list = []) -> str:
     stage = opp.get("stage", "Lead")
     required = STAGE_REQUIRED.get(stage, [])
     current  = opp.get("meddpicc", {E: 0 for E in "E C M DC DP PP I CO".split()})
@@ -370,6 +370,16 @@ def build_meddpicc_prompt(opp: dict, new_input: str, fewshots: list) -> str:
 
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만."""
 
+    # 이번 세션 대화 이력 (최근 10턴)
+    conv_block = ""
+    if conversation:
+        lines = []
+        for t in conversation[-10:]:
+            role = "영업대표" if t.get("role") == "rep" else "AI"
+            text = t.get("text", "")[:400]
+            lines.append(f"{role}: {text}")
+        conv_block = "\n## 이번 세션 대화 이력 (이미 파악된 내용 참고)\n" + "\n".join(lines)
+
     user_prompt = f"""## 딜 정보
 사업기회: {opp.get('사업기회명', '')}
 고객사: {opp.get('고객사명', '')} ({opp.get('산업', '')})
@@ -378,8 +388,9 @@ Stage: {stage}
 
 ## 기존 누적 정보
 {existing}
+{conv_block}
 
-## 현재 입력 텍스트
+## 현재 입력 텍스트 (이번에 새로 추가된 내용)
 {new_input}
 
 ## 현재 MEDDPICC 점수
@@ -976,6 +987,7 @@ async def chat(req: ChatRequest):
 class EvalRequest(BaseModel):
     opp_id: str
     input_text: str
+    conversation: list = []
 
 @app.post("/api/meddpicc/evaluate")
 async def evaluate_meddpicc(req: EvalRequest):
@@ -985,7 +997,7 @@ async def evaluate_meddpicc(req: EvalRequest):
         raise HTTPException(404, "Opportunity not found")
 
     fewshots = load_fewshots()
-    sys_prompt, user_prompt = build_meddpicc_prompt(opp, req.input_text, fewshots)
+    sys_prompt, user_prompt = build_meddpicc_prompt(opp, req.input_text, fewshots, req.conversation)
 
     if not ANTHROPIC_OK:
         # API 키 미설정 시 키워드 기반 폴백 평가 (시연/오프라인 동작 보장)

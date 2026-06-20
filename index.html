@@ -1888,20 +1888,17 @@ async function sendChat() {
         addMsg('agent', '답변 중 오류가 발생했습니다. 다시 시도해 주세요.');
       }
 
-      // ── 방식 B: 후속 답변도 점수에 반영 ──
-      // 영업대표의 자연어 답변을 재평가해 변동분을 미리보기에 누적
+      // ── 추가 대화 내용을 점수에 반영 ──
       try {
         const reEval = await api('POST', '/api/meddpicc/evaluate',
           {opp_id: S.currentOpp.id, input_text: msg, conversation: S.conversation});
         const newChanges = (reEval.changes || []).filter(c => (c.evidence||'').trim() || (c.reason||'').trim());
         if (newChanges.length > 0) {
-          // 기존 미리보기(S.evalResult)에 누적
           const base = S.evalResult ? {...S.evalResult.scores} : {...(S.currentOpp.meddpicc||{})};
           const mergedChanges = (S.evalResult?.changes || []).slice();
           newChanges.forEach(c => {
             if (c.to > (base[c.item]||0)) {
               base[c.item] = c.to;
-              // 같은 항목이 이미 있으면 to만 갱신, 없으면 추가
               const ex = mergedChanges.find(x => x.item === c.item);
               if (ex) { ex.to = c.to; ex.evidence = c.evidence || ex.evidence; }
               else mergedChanges.push(c);
@@ -1912,8 +1909,13 @@ async function sendChat() {
             changes: mergedChanges,
             preview_text: S.evalResult?.preview_text || '',
           };
-          showPreview(S.evalResult, S.pendingFile ? `[회의록 분석] ${S.pendingFile.name}` : msg);
-          addMsg('agent', '말씀해 주신 내용을 반영해 점수를 다시 추렸습니다. 확인 후 업데이트해 주세요.');
+          // 스코어 변동 요약 메시지 + 업데이트 버튼
+          const oldTotal = S.currentOpp.score?.total || 0;
+          const newTotal = calcPreviewTotal(base);
+          const changedNames = mergedChanges.map(c => MEDDPICC_NAMES[c.item]||c.item).join(', ');
+          const deltaText = newTotal > oldTotal ? `+${(newTotal-oldTotal).toFixed(1)}점` : `${(newTotal-oldTotal).toFixed(1)}점`;
+          S.evalResult.preview_text = `추가 대화 내용을 반영하면 ${changedNames} 항목이 업데이트되어 Deal Score ${oldTotal.toFixed(0)}점 → ${newTotal.toFixed(0)}점 (${deltaText})이 됩니다.`;
+          showPreview(S.evalResult, msg);
         }
       } catch(e) { /* 재평가 실패 시 답변만 유지 */ }
     } else if (msg.length > 30) {
@@ -2092,6 +2094,12 @@ function loadCoachingNotes(opp) {
   }).join('');
 }
 
+
+function calcPreviewTotal(meddpicc) {
+  const w = {E:2,C:2,M:1.5,DC:1.5,DP:1.5,I:1.5,PP:1,CO:1};
+  const raw = Object.keys(w).reduce((s,k) => s + (meddpicc[k]||0)*w[k], 0);
+  return parseFloat(((raw/36)*33.3).toFixed(1));
+}
 
 function showPreview(evalResult, inputText) {
   const changes = evalResult.changes || [];

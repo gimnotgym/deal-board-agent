@@ -1147,7 +1147,7 @@ async def update_meddpicc(req: UpdateRequest):
   "title": "날짜없이 핵심만 (예: CTO 통화 — 결정절차·챔피언 확인) 20자 이내",
   "summary": "- 파악된 핵심사실 1\n- 파악된 핵심사실 2\n- 파악된 핵심사실 3\n[스코어 변경] {changed_str}"
 }}"""
-            resp = anthropic_client.messages.create(
+            resp = _client.messages.create(
                 model="claude-3-5-haiku-20241022",
                 max_tokens=400,
                 messages=[{"role": "user", "content": sum_prompt}]

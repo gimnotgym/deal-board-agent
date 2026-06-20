@@ -162,17 +162,27 @@ KEY_ACCOUNTS = {
     "롯데쇼핑","이마트","쿠팡","현대글로비스","대한항공","SK스토아","삼성생명",
 }
 
+_weights_cache: dict = {}
+
 def load_meddpicc_weights() -> dict:
+    if _weights_cache:
+        return dict(_weights_cache)
     p = DATA / "meddpicc_weights.json"
     if not p.exists():
+        _weights_cache.update(_DEFAULT_WEIGHTS)
         return dict(_DEFAULT_WEIGHTS)
     try:
         with open(p, encoding="utf-8") as f:
             w = json.load(f)
-        # 누락 항목은 기본값으로 채움
-        return {k: w.get(k, _DEFAULT_WEIGHTS[k]) for k in _DEFAULT_WEIGHTS}
+        merged = {k: w.get(k, _DEFAULT_WEIGHTS[k]) for k in _DEFAULT_WEIGHTS}
+        _weights_cache.update(merged)
+        return merged
     except Exception:
+        _weights_cache.update(_DEFAULT_WEIGHTS)
         return dict(_DEFAULT_WEIGHTS)
+
+def invalidate_weights_cache():
+    _weights_cache.clear()
 
 def save_meddpicc_weights(weights: dict):
     p = DATA / "meddpicc_weights.json"
@@ -892,12 +902,18 @@ async def get_pipeline(
             "weighted": round(sum(o["수주목표액"] * o.get("수주확도",0)/100 for o in s_opps), 1),
         })
 
-    # 팀원별 현황 (영업리더용)
+    # 팀원별 현황 — 캐시된 score 재활용 (N+1 쿼리 방지)
+    def _get_score(o):
+        cached_opp = cache_get(f"opp_{o['id']}")
+        if cached_opp and cached_opp.get("score"):
+            return cached_opp["score"]["total"]
+        return o.get("score", {}).get("total") or calc_deal_score(o, closed_deals)["total"]
+
     rep_summary = []
     all_reps = list(set(o.get("영업대표","") for o in opps))
     for r in all_reps:
         r_opps = [o for o in opps if o.get("영업대표") == r]
-        scores = [calc_deal_score(o, closed_deals)["total"] for o in r_opps]
+        scores = [_get_score(o) for o in r_opps]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0
         rep_summary.append({
             "name": r, "deal_count": len(r_opps),
@@ -905,8 +921,8 @@ async def get_pipeline(
             "avg_score": avg_score,
         })
 
-    # 팀 평균 스코어
-    all_scores = [calc_deal_score(o, closed_deals)["total"] for o in opps]
+    # 팀 평균 스코어 — 동일하게 캐시 재활용
+    all_scores = [_get_score(o) for o in opps]
     team_avg   = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
     for r in rep_summary:
         r["score_alert"] = r["avg_score"] < team_avg - 15
@@ -1634,6 +1650,7 @@ async def update_meddpicc_weights(req: WeightsUpdate):
         if not (0.0 <= v <= 5.0):
             raise HTTPException(400, f"Weight out of range (0~5): {k}={v}")
     save_meddpicc_weights(req.weights)
+    invalidate_weights_cache()
     cache_clear()  # 가중치 변경 시 스코어 캐시 무효화
     return {"success": True}
 

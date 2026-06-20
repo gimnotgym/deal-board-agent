@@ -2834,26 +2834,44 @@ function execFilter(filter, btn) {
   console.log(`[execFilter] 필터:${(_t1-_t0).toFixed(1)}ms / 렌더:${(_t2-_t1).toFixed(1)}ms / 행수:${filtered.length}`);
 }
 
+const EXEC_INITIAL = 20;
+let _allExecSorted = [];
+
 function renderExecDeals(opps) {
   const tbody = document.getElementById('execDealList');
-  const sorted = [...opps].sort((a,b) => {
+  _allExecSorted = [...opps].sort((a,b) => {
     const aA = a.stage_alert === 'danger' ? 1 : a.stage_alert === 'warning' ? 0 : -1;
     const bA = b.stage_alert === 'danger' ? 1 : b.stage_alert === 'warning' ? 0 : -1;
     if (bA !== aA) return bA - aA;
     return (b.score?.total||0) - (a.score?.total||0);
   });
 
-  if (!sorted.length) {
+  if (!_allExecSorted.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty-state">딜이 없습니다</td></tr>';
     return;
   }
 
-  const html = sorted.map(o => {
+  tbody.innerHTML = _execDealRows(_allExecSorted.slice(0, EXEC_INITIAL));
+  if (_allExecSorted.length > EXEC_INITIAL) {
+    const more = document.createElement('tr');
+    more.id = 'execMoreRow';
+    more.innerHTML = `<td colspan="5" style="text-align:center;padding:10px;background:#F5F5F3">
+      <button onclick="showMoreExecDeals()" style="background:none;border:none;color:#6B4FBB;font-weight:600;cursor:pointer;font-size:12px">더보기 (${_allExecSorted.length - EXEC_INITIAL}건) ▼</button>
+    </td>`;
+    tbody.appendChild(more);
+  }
+}
+
+function showMoreExecDeals() {
+  const tbody = document.getElementById('execDealList');
+  const moreRow = document.getElementById('execMoreRow');
+  if (moreRow) moreRow.remove();
+  tbody.insertAdjacentHTML('beforeend', _execDealRows(_allExecSorted.slice(EXEC_INITIAL)));
+}
+
+function _execDealRows(list) {
+  return list.map(o => {
     const score = o.score || {};
-    const warn = (score.total < 40 || o.stage_alert === 'danger') ? '⚠️' : (o.stage_alert === 'warning') ? '⚠' : '';
-    const warnTitle = score.total < 40 ? 'Deal Score 40점 미만' :
-                      o.stage_alert === 'danger' ? 'Stage 체류 2배 초과' :
-                      o.stage_alert === 'warning' ? 'Stage 체류 1.5배 초과' : '';
     return `<tr class="deal-row" onclick="openExecDeal('${o.id}')">
       <td>
         <div class="deal-name" style="font-size:12px">${o.사업기회명}</div>
@@ -2870,7 +2888,6 @@ function renderExecDeals(opps) {
       <td style="font-size:12px;font-weight:600;white-space:nowrap">${fmtAmt(o.수주목표액)}억</td>
     </tr>`;
   }).join('');
-  tbody.innerHTML = html;
 }
 
 async function openExecDeal(oppId) {

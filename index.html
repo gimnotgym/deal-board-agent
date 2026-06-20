@@ -750,11 +750,11 @@ function ensurePdfjs(cb) {
       <!-- Deal Board (70%) -->
       <div class="exec-board">
         <div class="filter-tabs" id="execFilterTabs">
-          <button class="ftab active" onclick="execFilter('focus',this)">🎯 Focus딜</button>
+          <button class="ftab" onclick="execFilter('focus',this)">🎯 Focus딜</button>
           <button class="ftab" onclick="execFilter('금융사업본부',this)">금융</button>
           <button class="ftab" onclick="execFilter('전략사업본부',this)">전략</button>
           <button class="ftab" onclick="execFilter('AX',this)">AX</button>
-          <button class="ftab" onclick="execFilter('urgent',this)">⚡ 입찰임박</button>
+          <button class="ftab active" onclick="execFilter('urgent',this)">⚡ 입찰임박</button>
           <button class="ftab" onclick="execFilter('all',this)">전체</button>
         </div>
         <div style="overflow-x:auto;overflow-y:auto;flex:1">
@@ -2680,8 +2680,9 @@ async function loadExecView() {
 
     const { stages, gapAmount } = computeWeightedWaterfall(opps);
     renderWaterfall(stages, gapAmount);
-    // 초기 Focus딜 탭 활성
-    execFilter('focus', document.querySelector('#execFilterTabs .ftab'));
+    // 초기 입찰임박 탭 활성
+    const urgentTab = [...document.querySelectorAll('#execFilterTabs .ftab')].find(b => b.textContent.includes('입찰임박'));
+    execFilter('urgent', urgentTab || document.querySelector('#execFilterTabs .ftab'));
     loadExecBriefing();
   } catch(e) { console.error(e); }
 }

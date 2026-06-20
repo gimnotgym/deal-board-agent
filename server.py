@@ -440,7 +440,10 @@ def build_agent_chat_prompt(opp: dict, conversation: list, new_message: str) -> 
     max_q = STAGE_MAX_QUESTIONS.get(stage, 1)
     asked = sum(1 for t in conversation if t.get("role") == "agent" and "?" in t.get("text", ""))
 
+    from datetime import date as _date
+    today_str = _date.today().strftime("%Y년 %m월 %d일")
     sys_prompt = f"""당신은 SK그룹 영업팀의 딜 코치입니다.
+오늘 날짜: {today_str}
 영업대표와 자연스러운 대화를 통해 사업기회 정보를 파악하고, 딜 진행 상황을 함께 점검합니다.
 
 ## 대화 원칙
@@ -492,7 +495,10 @@ def build_report_chat_prompt(opp: dict, new_message: str, viewer_role: str) -> t
     rep = opp.get("영업대표", "담당자")
     viewer = "사업부문장" if viewer_role == "exec" else "영업리더"
 
+    from datetime import date as _date
+    today_str = _date.today().strftime("%Y년 %m월 %d일")
     sys_prompt = f"""당신은 SK그룹 영업 AI 어시스턴트입니다.
+오늘 날짜: {today_str}
 {viewer}이 특정 딜에 대해 물으면, 지금까지 진행된 내용을 **사실 위주로 요약 보고**합니다.
 
 ## 답변 원칙 (매우 중요)
@@ -1285,9 +1291,13 @@ class MeetingChatRequest(BaseModel):
 
 @app.post("/api/meeting/chat")
 async def meeting_chat(req: MeetingChatRequest):
+    from datetime import date as _date
+    today_str = _date.today().strftime("%Y년 %m월 %d일")
     system_prompt = (
+        f"오늘 날짜: {today_str}\n"
         "아래 회의록 내용만 근거로 사용자 질문에 한국어로 답하세요.\n"
         "회의록에 없는 내용은 \"회의록에 명시되어 있지 않습니다\"라고 답하고 지어내지 마세요.\n"
+        "날짜 언급 시 오늘 날짜 기준으로 '며칠 전', '며칠 후' 등 정확히 표현하세요.\n"
         "답변 후, 아직 채워지지 않은 MEDDPICC 항목이 있고 자연스러울 때만\n"
         "보완 질문 1개를 덧붙이세요(없으면 생략)."
     )

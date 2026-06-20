@@ -1595,9 +1595,10 @@ function renderRepDealList(opps) {
     const dBid = daysTo(o.입찰일);
     const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
     const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
+    const memoBadge = o.leader_memo ? `<span title="${escHtml(o.leader_memo)}" style="display:inline-flex;align-items:center;gap:3px;background:#FFF3CD;border:1px solid #FFCC44;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;color:#8B6000;margin-left:6px;white-space:nowrap">💬 리더 메모</span>` : '';
     return `<tr class="deal-row" onclick="openDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')" id="row-${o.id}">
       <td>
-        <div class="deal-name">${o.사업기회명}</div>
+        <div class="deal-name">${o.사업기회명}${memoBadge}</div>
         <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
       </td>
       <td>${stageBadge(o.stage)}</td>
@@ -1636,9 +1637,10 @@ function showMoreRepDeals() {
     const dBid = daysTo(o.입찰일);
     const dDay = dBid !== null && dBid >= 0 ? `D-${dBid}` : (dBid !== null && dBid < 0 ? '마감' : '—');
     const dStyle = dBid !== null && dBid <= 14 && dBid >= 0 ? 'color:var(--danger);font-weight:700' : 'color:var(--text2)';
+    const memoBadge = o.leader_memo ? `<span title="${escHtml(o.leader_memo)}" style="display:inline-flex;align-items:center;gap:3px;background:#FFF3CD;border:1px solid #FFCC44;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;color:#8B6000;margin-left:6px;white-space:nowrap">💬 리더 메모</span>` : '';
     return `<tr class="deal-row" onclick="openDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')" id="row-${o.id}">
       <td>
-        <div class="deal-name">${o.사업기회명}</div>
+        <div class="deal-name">${o.사업기회명}${memoBadge}</div>
         <div class="deal-client">${o.고객사명} ${bizTag(o.사업유형)}</div>
       </td>
       <td>${stageBadge(o.stage)}</td>

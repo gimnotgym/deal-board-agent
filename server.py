@@ -1504,10 +1504,15 @@ async def get_briefing(req: BriefingRequest):
 # ── 관리자 API ──
 @app.get("/api/admin/conflicts")
 async def get_conflicts(status: Optional[str] = None, item: Optional[str] = None):
+    cache_key = f"admin_conflicts_{status or 'all'}_{item or 'all'}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
     conflicts = load("conflict_log")
     if status: conflicts = [c for c in conflicts if c.get("status") == status]
     if item:   conflicts = [c for c in conflicts if c.get("item") == item]
     conflicts.sort(key=lambda x: x.get("timestamp",""), reverse=True)
+    cache_set(cache_key, conflicts)
     return conflicts
 
 class ConflictUpdate(BaseModel):
@@ -1546,11 +1551,20 @@ async def update_conflict(conflict_id: str, req: ConflictUpdate):
         conflicts[idx]["status"] = "dismissed"
 
     save("conflict_log", conflicts)
+    for k in [k for k in _cache if k.startswith("admin_conflicts")]:
+        _cache.pop(k, None)
+    if req.add_to_fewshot:
+        _cache.pop("admin_fewshots", None)
     return {"success": True}
 
 @app.get("/api/admin/fewshots")
 async def get_fewshots():
-    return load_fewshots()
+    cached = cache_get("admin_fewshots")
+    if cached is not None:
+        return cached
+    result = load_fewshots()
+    cache_set("admin_fewshots", result)
+    return result
 
 class FewshotCreate(BaseModel):
     item: str
@@ -1570,6 +1584,7 @@ async def create_fewshot(req: FewshotCreate):
         "created_at": datetime.now().isoformat(), "source_conflict_id": None,
     })
     save_fewshots(fewshots)
+    _cache.pop("admin_fewshots", None)
     return {"success": True, "id": new_id}
 
 @app.delete("/api/admin/fewshots/{fs_id}")
@@ -1577,11 +1592,17 @@ async def delete_fewshot(fs_id: str):
     fewshots = load_fewshots()
     fewshots = [f for f in fewshots if f["id"] != fs_id]
     save_fewshots(fewshots)
+    _cache.pop("admin_fewshots", None)
     return {"success": True}
 
 @app.get("/api/admin/prompt")
 async def get_system_prompt():
-    return {"prompt": load_prompt()}
+    cached = cache_get("admin_prompt")
+    if cached is not None:
+        return cached
+    result = {"prompt": load_prompt()}
+    cache_set("admin_prompt", result)
+    return result
 
 class PromptUpdate(BaseModel):
     prompt: str
@@ -1589,6 +1610,7 @@ class PromptUpdate(BaseModel):
 @app.put("/api/admin/prompt")
 async def update_system_prompt(req: PromptUpdate):
     save_prompt(req.prompt)
+    _cache.pop("admin_prompt", None)
     return {"success": True}
 
 # ── 아젠다 Push API ──
@@ -1695,12 +1717,16 @@ async def update_meddpicc_weights(req: WeightsUpdate):
             raise HTTPException(400, f"Weight out of range (0~5): {k}={v}")
     save_meddpicc_weights(req.weights)
     invalidate_weights_cache()
+    _cache.pop("admin_meddpicc_analysis", None)
     cache_clear()  # 가중치 변경 시 스코어 캐시 무효화
     return {"success": True}
 
 # ── MEDDPICC 수주 상관관계 분석 API ──
 @app.get("/api/admin/meddpicc-analysis")
 async def meddpicc_analysis():
+    cached = cache_get("admin_meddpicc_analysis")
+    if cached is not None:
+        return cached
     opps = load("opportunities")
     ITEMS = list(_DEFAULT_WEIGHTS.keys())
     NAMES = {
@@ -1749,11 +1775,13 @@ async def meddpicc_analysis():
             ) if won_opps else 0,
         })
 
-    return {
+    result = {
         "won_count": len(won_opps),
         "active_count": len(active),
         "items": items_detail,
     }
+    cache_set("admin_meddpicc_analysis", result)
+    return result
 
 @app.get("/health")
 async def health():

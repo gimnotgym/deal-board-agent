@@ -3242,9 +3242,7 @@ async function submitAgenda() {
 // 관리자 뷰
 // ════════════════════════════════════════
 function loadAdminView() {
-  loadConflicts();
-  loadFewshots();
-  loadPrompt();
+  Promise.all([loadConflicts(), loadFewshots(), loadPrompt()]);
 }
 
 function adminTab(tab) {

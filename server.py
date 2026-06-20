@@ -99,6 +99,38 @@ async def warm_cache():
         for o in opps:
             cache_set(f"opp_{o['id']}", o)
         print(f"[startup] {len(opps)}개 딜 스코어 계산 완료 (개별 캐시 포함)")
+
+        # 사업부문장/리더 브리핑 캐시 사전 계산 (첫 방문 시 즉시 응답)
+        try:
+            import datetime as _dt
+            _today = _dt.date.today()
+            _gap = calc_pipeline_gap(opps)
+            _risky = sorted(
+                [o for o in opps if o["score"]["total"] < 40 or o.get("stage_alert") == "danger"],
+                key=lambda x: x["score"]["total"]
+            )[:5]
+            _urgent = []
+            for o in opps:
+                try:
+                    _d = _dt.date.fromisoformat(o["입찰일"])
+                    _days = (_d - _today).days
+                    if 0 <= _days <= 30:
+                        o["_days_to_bid"] = _days
+                        _urgent.append(o)
+                except Exception:
+                    pass
+            _urgent.sort(key=lambda x: x.get("_days_to_bid", 99))
+            _pre = {
+                "briefing": _fallback_briefing(opps, _gap, _risky, _urgent),
+                "risky_deals": _risky[:3],
+                "urgent_deals": _urgent[:3],
+                "gap": _gap,
+            }
+            cache_set("briefing_exec_all_all", _pre)
+            cache_set("briefing_leader_all_all", _pre)
+            print("[startup] 브리핑 캐시 사전 계산 완료")
+        except Exception as be:
+            print(f"[startup] 브리핑 사전계산 실패: {be}")
     except Exception as e:
         print(f"[startup] 캐시 워밍 실패: {e}")
 
@@ -1372,18 +1404,15 @@ async def get_briefing(req: BriefingRequest):
         if cached:
             return cached
 
-    opps    = load("opportunities")
-    history = load("history")
+    opps = load("opportunities")
     if req.dept:     opps = [o for o in opps if o.get("사업부문") == req.dept]
     if req.rep_name: opps = [o for o in opps if o.get("영업대표") == req.rep_name]
 
-    # 최적화: rep별 history 필터링
-    if req.rep_name:
-        history = [h for h in history if h.get("영업대표") == req.rep_name]
-
-    # 스코어 계산
+    # 캐시된 점수 재활용 — 재계산 생략
+    closed_deals = load("closed_deals")
     for o in opps:
-        o["_score"] = calc_deal_score(o, history)
+        cached_opp = cache_get(f"opp_{o['id']}")
+        o["_score"] = (cached_opp or {}).get("score") or calc_deal_score(o, closed_deals)
 
     # 위험 딜 선별
     risky = sorted(
@@ -1450,8 +1479,8 @@ async def get_briefing(req: BriefingRequest):
 
     try:
         resp = _client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=600,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
             system=sys_p,
             messages=[{"role": "user", "content": user_p}],
         )

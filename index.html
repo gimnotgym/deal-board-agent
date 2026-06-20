@@ -3077,13 +3077,14 @@ function renderExecBriefingCard(res) {
   const candidateRows = gapCandidates.map(o => {
     cumulativeAmt += (o.수주목표액 || 0);
     const probColor = (o.수주확도||0) >= 70 ? '#10B981' : (o.수주확도||0) >= 40 ? '#F59E0B' : '#EF4444';
-    const stageShort = o.stage.replace('Identified-','').replace('Registered','Reg').replace('Remind','Rem');
+    const dealScore = (o.score?.total || 0).toFixed(0);
+    const scoreColor = dealScore >= 70 ? '#10B981' : dealScore >= 50 ? '#F59E0B' : '#EF4444';
     const cumFill = Math.min(cumulativeAmt / (gapAmt || 1) * 100, 100).toFixed(0);
     return `<tr style="cursor:pointer" onclick="openExecDeal('${o.id}')">
       <td style="font-size:11px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(o.사업기회명)}</td>
       <td style="text-align:right;font-size:11px;font-weight:700">${fmtAmt(o.수주목표액)}억</td>
       <td style="text-align:center;font-size:10px;color:${probColor};font-weight:700">${o.수주확도||0}%</td>
-      <td style="font-size:10px;color:var(--text2)">${stageShort}</td>
+      <td style="text-align:center;font-size:10px;font-weight:700;color:${scoreColor}">${dealScore}점</td>
     </tr>`;
   }).join('') || '<tr><td colspan="4" style="color:var(--text3);font-size:11px;text-align:center">후보 딜 없음</td></tr>';
 

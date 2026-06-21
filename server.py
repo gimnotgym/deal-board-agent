@@ -1627,10 +1627,17 @@ class BriefingRequest(BaseModel):
 async def get_briefing(req: BriefingRequest):
     _t0 = time()
     # ── 캐시 확인 (쿼리가 없을 때만) ──
-    cache_key = f"briefing_{req.role}_{req.dept or 'all'}_{req.rep_name or 'all'}"
+    cache_key = f"briefing_{req.role}_{req.dept or 'all'}_{req.rep_name or 'all'}_{date.today().isoformat()}"
     if not req.query:  # 사용자 질의가 없을 때만 캐시
         cached = cache_get(cache_key)
         if cached:
+            # 캐시 히트라도 urgent 딜의 _days_to_bid는 오늘 날짜로 재계산
+            _today_recalc = date.today()
+            for ud in (cached.get("urgent_deals") or []):
+                try:
+                    ud["_days_to_bid"] = (date.fromisoformat(ud["입찰일"]) - _today_recalc).days
+                except Exception:
+                    pass
             print(f"[timing] POST /api/briefing cache HIT {(time()-_t0)*1000:.0f}ms key={cache_key}")
             return cached
     print(f"[timing] POST /api/briefing cache MISS key={cache_key}")

@@ -1240,9 +1240,14 @@ async def evaluate_meddpicc(req: EvalRequest):
 
     if _is_demo_opp(req.opp_id):
         if _is_demo_doc2(req.input_text):
-            return _DEMO_FIXTURE_2
+            # 현재 저장 스코어에 변경분만 적용 (절대값 아님)
+            cur = dict(opp.get("meddpicc") or {})
+            cur.update({"DP": 2, "C": 2})
+            return {**_DEMO_FIXTURE_2, "scores": cur}
         if _is_demo_step3(req.input_text):
-            return _DEMO_FIXTURE_3
+            cur = dict(opp.get("meddpicc") or {})
+            cur.update({"C": 3})
+            return {**_DEMO_FIXTURE_3, "scores": cur}
 
     fewshots = load_fewshots()
     sys_prompt, user_prompt = build_meddpicc_prompt(opp, req.input_text, fewshots, req.conversation)

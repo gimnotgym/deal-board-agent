@@ -96,6 +96,8 @@ _DEMO_FIXTURE_3 = {  # Step 3: 최 차장 답변
     "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": None, "recommended_stage": None,
 }
 
+_DEMO_CHAT_2 = "CTO 직접 통화로 의사결정 구조가 명확해졌네요. 6월 30일 경영위원회 전에 CFO 협의까지 완료해야 하니 PT 일정이 실질적인 마감입니다.\n\n한 가지 여쭤볼게요 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"
+
 _DEMO_CHAT_3 = "좋은 신호입니다. 최 차장이 기존 협업에 긍정적이라면 여신심사팀 저항은 우려보다 훨씬 낮을 수 있어요.\n\nPT 전략 제안: 도입부에 차세대 구축 성과 수치를 먼저 배치하고, 이번 GenAI가 그 위에 얹히는 구조임을 강조하세요. '새로운 시스템'이 아닌 '기존 투자의 확장'으로 프레이밍하면 최 차장이 내부에서 설득하기 쉬워집니다.\n\nC(내부 추진자)에 최 차장을 CTO와 함께 복수 챔피언으로 업데이트했습니다."
 
 def _is_demo_opp(opp_id: str) -> bool:
@@ -1198,8 +1200,11 @@ async def chat(req: ChatRequest):
             "meddpicc_eval": None,
         }
 
-    if _is_demo_opp(req.opp_id) and not is_report and _is_demo_step3(req.message):
-        return {"reply": _DEMO_CHAT_3, "meddpicc_eval": None}
+    if _is_demo_opp(req.opp_id) and not is_report:
+        if _is_demo_step3(req.message):
+            return {"reply": _DEMO_CHAT_3, "meddpicc_eval": None}
+        if _is_demo_doc2(req.message):
+            return {"reply": _DEMO_CHAT_2, "meddpicc_eval": None}
 
     if is_report:
         sys_prompt, messages = build_report_chat_prompt(opp, req.message, req.role)

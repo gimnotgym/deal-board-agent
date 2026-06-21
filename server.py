@@ -548,7 +548,7 @@ E:{current.get('E',0)} C:{current.get('C',0)} M:{current.get('M',0)} DC:{current
   "ambiguities": [{{"item":"E","trigger":"트리거 문장","is_stage_required":true,"question":"추가 질문"}}],
   "champion_type": "Type1 실무추진자 또는 Type2 정보제공자 또는 Type3 정치적지지자 또는 null",
   "champion_risk": "리스크 내용 또는 null",
-  "preview_text": "오늘 확인된 내용 자연어 요약 (점수 숫자 언급 금지)",
+  "preview_text": "오늘 확인된 핵심 내용을 2~3문장으로 요약. 반드시 새로운 문장으로 작성하고 원문을 그대로 인용하거나 잘라붙이지 말 것. 점수·숫자·MEDDPICC 항목명 언급 금지.",
   "next_action": "다음에 확인하면 좋을 것 한 가지 (자연어)",
   "recommended_stage": null
 }}

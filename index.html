@@ -2147,13 +2147,16 @@ function showPreview(evalResult, inputText) {
   // 채팅 버블 안에 인라인으로 표시
   const bubbleId = `preview-bubble-${Date.now()}`;
   const btnId = `update-btn-${Date.now()}`;
-  const headerHtml = previewText
-    ? `<div style="font-size:12px;color:var(--text);margin-bottom:10px;line-height:1.6">${escHtml(previewText)}</div>`
+  const summaryHtml = previewText
+    ? `<div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📋 내용 요약</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7;padding:8px 10px;background:var(--bg2);border-radius:6px">${escHtml(previewText)}</div>
+      </div>`
     : '';
   const html = `
-    ${headerHtml}
+    ${summaryHtml}
     ${stageHtml}
-    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">반영될 항목</div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">📊 스코어 변경</div>
     <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px">${items}</div>
     <button onclick="doUpdate('${bubbleId}','${btnId}')" id="${btnId}" data-update-btn="1" style="background:#111;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;width:100%">✓ 오늘 내용 업데이트 하기</button>
   `;

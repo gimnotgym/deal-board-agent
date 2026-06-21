@@ -62,6 +62,54 @@ except Exception:
     _client = None
     ANTHROPIC_OK = False
 
+# ── 데모 픽스처 (신한은행 시나리오 고정) ──
+_DEMO_OPP_ID = "OPP-2026-125"
+
+_DEMO_FIXTURE_1 = {  # 문서1: 회의록_0528
+    "summary": "5월 28일 신한은행 AI 플랫폼 설명회를 분석했습니다.\n연간 120만 시간 절감 기대성과와 80억 원 예산이 공식 확인됐고, 기술 40%·레퍼런스 30%·가격 30% 평가 배점도 파악됐습니다. 박성민 팀장이 레퍼런스 자료를 직접 요청해 내부 지지자로 판단됩니다.",
+    "changes": [
+        {"code": "M", "from": 1, "to": 3, "direction": "up", "evidence": "연간 약 120만 시간 소요 / 여신심사보고서 초안 생성, 고객상담 자동 요약", "reason": "기대성과 수치와 적용 업무 구체적 명시"},
+        {"code": "E", "from": 2, "to": 3, "direction": "up", "evidence": "총 예산: 80억 원 (소프트웨어 라이선스 + 구축 용역)", "reason": "총예산 공식 확인"},
+        {"code": "DC", "from": 0, "to": 2, "direction": "up", "evidence": "기술 완성도 40% / 금융권 레퍼런스 30% / 가격 경쟁력 30%", "reason": "평가 기준 배점 명확히 확인"},
+    ],
+    "ambiguities": [{"item": "CO", "trigger": "경쟁 벤더 수 미확인", "is_stage_required": False, "question": "설명회에 당사외 어떤 벤더들이 참석했는지 파악하셨나요? 경쟁사가 중요할 것 같네요."}],
+}
+
+_DEMO_FIXTURE_2 = {  # 문서2: 통화요약_0609
+    "scores": {"E": 3, "C": 2, "M": 3, "DC": 2, "DP": 2, "PP": 0, "I": 2, "CO": 1},
+    "changes": [
+        {"item": "DP", "from": 0, "to": 2, "direction": "up", "evidence": "CTO→CFO 협의→6월 30일 경영위원회 보고로 최종 승인 예정", "reason": "의사결정 승인 경로 직접 확인"},
+        {"item": "C",  "from": 1, "to": 2, "direction": "up", "evidence": "이번 사업 최종 결정권자: 이준혁 전무", "reason": "실질 의사결정권자 직접 확인"},
+    ],
+    "ambiguities": [{"item": "I", "trigger": "내부 설득이 관건", "is_stage_required": False, "question": "CTO가 '내부 설득이 관건'이라고 하셨는데 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"}],
+    "preview_text": "이준혁 CTO와의 직접 통화로 의사결정 구조가 확인됐습니다. CTO 검토 → CFO 협의 → 6월 30일 경영위원회 보고로 이어지는 승인 경로가 확정됐으며, CTO가 실제 업무 프로세스 기반의 라이브 데모를 직접 요청했습니다.",
+    "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": "6월 30일 PT 확정 회신 및 라이브 데모 시나리오 구성", "recommended_stage": None,
+}
+
+_DEMO_FIXTURE_3 = {  # Step 3: 최 차장 답변
+    "scores": {"E": 3, "C": 3, "M": 3, "DC": 2, "DP": 2, "PP": 0, "I": 2, "CO": 1},
+    "changes": [
+        {"item": "C", "from": 2, "to": 3, "direction": "up", "evidence": "최 차장, 차세대 시스템 구축 시 당사 시스템에 매우 만족", "reason": "여신심사팀 차장을 복수 챔피언으로 확인"},
+    ],
+    "ambiguities": [],
+    "preview_text": "여신심사팀 최현우 차장이 기존 당사 시스템에 만족도가 높은 것으로 확인됐습니다. CTO와 함께 복수 챔피언 구조가 형성됐으며, PT에서 차세대 구축 경험을 강조하는 프레이밍이 효과적일 것으로 판단됩니다.",
+    "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": None, "recommended_stage": None,
+}
+
+_DEMO_CHAT_3 = "좋은 신호입니다. 최 차장이 기존 협업에 긍정적이라면 여신심사팀 저항은 우려보다 훨씬 낮을 수 있어요.\n\nPT 전략 제안: 도입부에 차세대 구축 성과 수치를 먼저 배치하고, 이번 GenAI가 그 위에 얹히는 구조임을 강조하세요. '새로운 시스템'이 아닌 '기존 투자의 확장'으로 프레이밍하면 최 차장이 내부에서 설득하기 쉬워집니다.\n\nC(내부 추진자)에 최 차장을 CTO와 함께 복수 챔피언으로 업데이트했습니다."
+
+def _is_demo_opp(opp_id: str) -> bool:
+    return opp_id == _DEMO_OPP_ID
+
+def _is_demo_doc1(text: str) -> bool:
+    return "120만 시간" in text or "신한은행 AI 플랫폼 도입 설명회" in text
+
+def _is_demo_doc2(text: str) -> bool:
+    return "이준혁" in text and ("CTO" in text or "통화" in text)
+
+def _is_demo_step3(text: str) -> bool:
+    return "최 차장" in text and "차세대" in text
+
 # ── 앱 설정 ──
 app = FastAPI(title="Deal Board Agent", version="1.0.0")
 
@@ -1150,6 +1198,9 @@ async def chat(req: ChatRequest):
             "meddpicc_eval": None,
         }
 
+    if _is_demo_opp(req.opp_id) and not is_report and _is_demo_step3(req.message):
+        return {"reply": _DEMO_CHAT_3, "meddpicc_eval": None}
+
     if is_report:
         sys_prompt, messages = build_report_chat_prompt(opp, req.message, req.role)
     else:
@@ -1181,6 +1232,12 @@ async def evaluate_meddpicc(req: EvalRequest):
     opp     = next((o for o in opps if o["id"] == req.opp_id), None)
     if not opp:
         raise HTTPException(404, "Opportunity not found")
+
+    if _is_demo_opp(req.opp_id):
+        if _is_demo_doc2(req.input_text):
+            return _DEMO_FIXTURE_2
+        if _is_demo_step3(req.input_text):
+            return _DEMO_FIXTURE_3
 
     fewshots = load_fewshots()
     sys_prompt, user_prompt = build_meddpicc_prompt(opp, req.input_text, fewshots, req.conversation)
@@ -1405,6 +1462,9 @@ async def analyze_meeting(req: MeetingAnalyzeRequest):
     opp  = next((o for o in opps if o["id"] == req.opp_id), None)
     if not opp:
         raise HTTPException(404, "Opportunity not found")
+
+    if _is_demo_opp(req.opp_id) and _is_demo_doc1(req.meeting_text):
+        return _DEMO_FIXTURE_1
 
     if not ANTHROPIC_OK:
         return _fallback_meeting_analyze(opp, req.meeting_text)

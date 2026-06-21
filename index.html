@@ -1432,11 +1432,14 @@ async function analyzeRepMeeting(file) {
         CO: '경쟁사나 자체 개발 검토 같은 다른 대안이 거론되고 있나요?',
       };
       const after = newScores;
-      const weak = ['M','E','DC','DP','CO'].find(k => (after[k]||0) <= 1 && FOLLOWUP_Q[k]);
-      if (weak) {
+      // 픽스처 ambiguities 우선, 없으면 FOLLOWUP_Q 기본값
+      const fixtureQ = (result.ambiguities || [])[0]?.question;
+      const weak = fixtureQ ? true : ['M','E','DC','DP','CO'].find(k => (after[k]||0) <= 1 && FOLLOWUP_Q[k]);
+      const followupText = fixtureQ || (weak ? FOLLOWUP_Q[weak] : null);
+      if (followupText) {
         S.pendingFollowupItem = weak;
         setTimeout(() => {
-          addMsg('agent', `위 내용은 확인 버튼으로 반영하시면 됩니다. 한 가지만 더 여쭤볼게요 — ${FOLLOWUP_Q[weak]}`);
+          addMsg('agent', `위 내용은 확인 버튼으로 반영하시면 됩니다. 한 가지만 더 여쭤볼게요 — ${followupText}`);
           S.askedCount++;
         }, 400);
       }

@@ -2340,13 +2340,18 @@ async function loadLeaderView() {
 
 async function loadLeaderBriefing() {
   const panel = document.getElementById('leaderMessages');
-  if (panel) panel.innerHTML = '';
+  if (!panel) return;
+  // 이미 로드된 경우 재호출 안함 (탭 재방문 시 중복 방지)
+  if (S._leaderBriefingLoaded) return;
+  S._leaderBriefingLoaded = true;
+  panel.innerHTML = '';
   showTypingInPanel('leaderMessages');
   try {
     const res = await api('POST', '/api/briefing', {role:'leader', dept: S.repDept});
     removeTypingInPanel('leaderMessages');
     renderLeaderBriefingCard(res);
   } catch(e) {
+    S._leaderBriefingLoaded = false;
     removeTypingInPanel('leaderMessages');
     addMsgToPanel('leaderMessages', 'agent', '팀 브리핑을 불러오는 중 오류가 발생했습니다.');
   }
@@ -2928,7 +2933,11 @@ function _execDealRows(list) {
 
 async function openExecDeal(oppId) {
   try {
-    const opp = await api('GET', `/api/opportunities/${oppId}`);
+    // allExecOpps가 이미 메모리에 있으면 API 호출 없이 즉시 렌더링
+    const cached = (typeof allExecOpps !== 'undefined' && allExecOpps.length)
+      ? allExecOpps.find(o => o.id === oppId) : null;
+    const opp = cached || await (_prefetchCache[oppId] || api('GET', `/api/opportunities/${oppId}`));
+    delete _prefetchCache[oppId];
     const panel = document.getElementById('execRightPanel');
     const medd = opp.meddpicc || {};
     const score = opp.score || {};
@@ -3040,12 +3049,15 @@ function resetExecPanel() {
 }
 
 async function loadExecBriefing() {
+  if (S._execBriefingLoaded) return;
+  S._execBriefingLoaded = true;
   showTypingInPanel('execMessages');
   try {
     const res = await api('POST', '/api/briefing', {role:'exec'});
     removeTypingInPanel('execMessages');
     renderExecBriefingCard(res);
   } catch(e) {
+    S._execBriefingLoaded = false;
     removeTypingInPanel('execMessages');
     addMsgToPanel('execMessages', 'agent', '브리핑을 불러오는 중 오류가 발생했습니다.');
   }
@@ -3080,7 +3092,7 @@ function renderExecBriefingCard(res) {
     const dealScore = (o.score?.total || 0).toFixed(0);
     const scoreColor = dealScore >= 70 ? '#10B981' : dealScore >= 50 ? '#F59E0B' : '#EF4444';
     const cumFill = Math.min(cumulativeAmt / (gapAmt || 1) * 100, 100).toFixed(0);
-    return `<tr style="cursor:pointer" onclick="openExecDeal('${o.id}')">
+    return `<tr style="cursor:pointer" onclick="openExecDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')">
       <td style="font-size:11px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(o.사업기회명)}</td>
       <td style="text-align:right;font-size:11px;font-weight:700">${fmtAmt(o.수주목표액)}억</td>
       <td style="text-align:center;font-size:10px;color:${probColor};font-weight:700">${o.수주확도||0}%</td>
@@ -3107,7 +3119,7 @@ function renderExecBriefingCard(res) {
       'Validated':'#10B981','Identified':'#3B82F6','Lead':'#9CA3AF'
     }[stage] || '#9CA3AF';
     const rows = stageOpps.map(o =>
-      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F5F5F3;cursor:pointer" onclick="openExecDeal('${o.id}')">
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F5F5F3;cursor:pointer" onclick="openExecDeal('${o.id}')" onmouseenter="prefetchDeal('${o.id}')">
         <span style="font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px">${escHtml(o.사업기회명)}</span>
         <span style="font-size:11px;color:var(--text2);white-space:nowrap">${fmtAmt(o.수주목표액)}억 · ${escHtml(o.영업대표)}</span>
       </div>`

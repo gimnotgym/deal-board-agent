@@ -22,7 +22,7 @@ load_dotenv()
 # ── 성능 최적화: 캐시 ──
 from time import time
 _cache = {}
-_cache_ttl = 300  # 5분 (초 단위)
+_cache_ttl = 3600  # 1시간 — 데모 중 캐시 만료 방지 (데이터는 사용자 액션으로만 변경)
 
 def cache_get(key):
     """캐시에서 값 조회 (TTL 확인)"""
@@ -79,15 +79,17 @@ async def init_data():
                 print(f"[startup] seed 복사: {seed_file.name}")
     print("[startup] data/ 초기화 완료")
 
-@app.on_event("startup")
-async def warm_cache():
-    """서버 시작 시 모든 딜 스코어 계산 후 캐시 저장 — 첫 페이지 로드 시 즉시 응답"""
+async def _do_warm_cache():
+    """백그라운드에서 캐시 워밍 — 서버 시작을 블로킹하지 않음"""
+    _w0 = time()
     try:
         opps = load("opportunities")
         closed_deals = load("closed_deals")
+        _rep_idx = _build_closed_index(closed_deals)  # O(n) 인덱스 사전 생성
+        cache_set("closed_deals_all", closed_deals)    # closed_deals도 캐시
         STAGE_N = STAGE_NORMAL_DAYS
         for o in opps:
-            o["score"] = calc_deal_score(o, closed_deals)
+            o["score"] = calc_deal_score(o, closed_deals, _rep_idx)
             normal = STAGE_N.get(o.get("stage", "Lead"), 30)
             days = o.get("stage_days", 0)
             o["stage_alert"] = (
@@ -98,7 +100,7 @@ async def warm_cache():
         cache_set("opps_all_all_all_all_all_all", opps)
         for o in opps:
             cache_set(f"opp_{o['id']}", o)
-        print(f"[startup] {len(opps)}개 딜 스코어 계산 완료 (개별 캐시 포함)")
+        print(f"[startup] {len(opps)}개 딜 스코어 계산 완료 ({(time()-_w0)*1000:.0f}ms)")
 
         # 사업부문장/리더 브리핑 캐시 사전 계산 (첫 방문 시 즉시 응답)
         try:
@@ -128,16 +130,95 @@ async def warm_cache():
             }
             cache_set("briefing_exec_all_all", _pre)
             cache_set("briefing_leader_all_all", _pre)
-            print("[startup] 브리핑 캐시 사전 계산 완료")
+
+            # pipeline_all_all 사전 계산 (사업부문장 페이지)
+            _STAGES = ["Lead","Identified","Identified-Remind","Identified-Registered",
+                       "Validated","Qualified","Negotiated","우선협상","계약완료"]
+            def _build_pipeline(opp_list):
+                _waterfall = []
+                for s in _STAGES:
+                    s_opps = [o for o in opp_list if o["stage"] == s]
+                    _waterfall.append({
+                        "stage": s, "count": len(s_opps),
+                        "total": sum(o["수주목표액"] for o in s_opps),
+                        "weighted": round(sum(o["수주목표액"]*o.get("수주확도",0)/100 for o in s_opps),1),
+                    })
+                _all_scores_flat = [o["score"]["total"] for o in opp_list if o.get("score")]
+                _team_avg = round(sum(_all_scores_flat)/len(_all_scores_flat),1) if _all_scores_flat else 0
+                _all_reps = list(set(o.get("영업대표","") for o in opp_list))
+                _rep_summary = []
+                for r in _all_reps:
+                    r_opps = [o for o in opp_list if o.get("영업대표") == r]
+                    r_scores = [o["score"]["total"] for o in r_opps if o.get("score")]
+                    avg = round(sum(r_scores)/len(r_scores),1) if r_scores else 0
+                    _rep_summary.append({
+                        "name": r, "deal_count": len(r_opps),
+                        "total_amount": sum(o["수주목표액"] for o in r_opps),
+                        "avg_score": avg, "score_alert": avg < _team_avg - 15,
+                    })
+                return {"gap": calc_pipeline_gap(opp_list), "waterfall": _waterfall,
+                        "rep_summary": _rep_summary, "team_avg_score": _team_avg}
+
+            cache_set("pipeline_all_all", _build_pipeline(opps))
+
+            # dept별 opps + pipeline + briefing 사전 계산
+            _depts = list(set(o.get("사업부문","") for o in opps if o.get("사업부문")))
+            for _dept in _depts:
+                _d_opps = [o for o in opps if o.get("사업부문") == _dept]
+                cache_set(f"opps_{_dept}_all_all_all_all_all", _d_opps)
+                cache_set(f"pipeline_{_dept}_all", _build_pipeline(_d_opps))
+                _d_gap = calc_pipeline_gap(_d_opps)
+                _d_risky = sorted([o for o in _d_opps if o["score"]["total"] < 40], key=lambda x: x["score"]["total"])[:5]
+                _d_urgent = [o for o in _d_opps if o.get("_days_to_bid") is not None][:3]
+                _d_pre = {
+                    "briefing": _fallback_briefing(_d_opps, _d_gap, _d_risky, _d_urgent),
+                    "risky_deals": _d_risky[:3], "urgent_deals": _d_urgent[:3], "gap": _d_gap,
+                }
+                cache_set(f"briefing_exec_{_dept}_all", _d_pre)
+                cache_set(f"briefing_leader_{_dept}_all", _d_pre)
+
+            print(f"[startup] 전체 캐시 워밍 완료 — {(time()-_w0)*1000:.0f}ms (dept: {_depts})")
         except Exception as be:
             print(f"[startup] 브리핑 사전계산 실패: {be}")
+
+        # 관리자 페이지 사전 캐시
+        try:
+            conflicts = load("conflict_log")
+            conflicts.sort(key=lambda x: x.get("timestamp",""), reverse=True)
+            cache_set("admin_conflicts_all_all", conflicts)
+            cache_set("admin_fewshots", load_fewshots())
+            cache_set("admin_prompt", {"prompt": load_prompt()})
+            print("[startup] 관리자 페이지 캐시 완료")
+        except Exception as ae:
+            print(f"[startup] 관리자 캐시 실패: {ae}")
+
     except Exception as e:
         print(f"[startup] 캐시 워밍 실패: {e}")
+
+@app.on_event("startup")
+async def warm_cache():
+    """서버 시작을 블로킹하지 않고 백그라운드에서 캐시 워밍"""
+    import asyncio
+    asyncio.create_task(_do_warm_cache())
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
+
+@app.get("/api/debug/cache")
+async def debug_cache():
+    """캐시 상태 확인 — 어떤 키가 캐시에 있는지 확인"""
+    keys = list(_cache.keys())
+    return {
+        "cached_keys": keys,
+        "count": len(keys),
+        "has_opps_all": "opps_all_all_all_all_all_all" in _cache,
+        "has_pipeline_all": "pipeline_all_all" in _cache,
+        "has_briefing_exec": any(k.startswith("briefing_exec") for k in keys),
+        "has_briefing_leader": any(k.startswith("briefing_leader") for k in keys),
+        "has_pipeline_dept": any(k.startswith("pipeline_") and k != "pipeline_all_all" for k in keys),
+    }
 
 BASE = Path(__file__).parent
 DATA = BASE / "data"
@@ -281,50 +362,68 @@ def calc_customer_history(opp: dict, closed_deals: list) -> float:
 
     return round(min(base + bonus, 20.0), 2)
 
-def calc_rep_rate(opp: dict, closed_deals: list) -> float:
+def _build_closed_index(closed_deals: list) -> dict:
+    """closed_deals를 rep별로 미리 그룹핑 — O(n²) → O(n) 최적화"""
+    idx: dict = {}
+    for d in closed_deals:
+        rep = d.get("영업대표", "")
+        result = d.get("결과", "")
+        if result not in ("계약완료", "Deal Lost"):
+            continue
+        if rep not in idx:
+            idx[rep] = {"total": 0, "won": 0}
+        idx[rep]["total"] += 1
+        if result == "계약완료":
+            idx[rep]["won"] += 1
+    return idx
+
+def calc_rep_rate(opp: dict, closed_deals: list = None, _rep_idx: dict = None) -> float:
     """Factor 5 · 영업대표 승률 (15점)
     승률 기본점수(0~12) + 신뢰도 보정(0~3)
     이력 3건 미만 → 6점 고정
     """
     rep = opp.get("영업대표", "")
-    rep_deals = [d for d in closed_deals
-                 if d.get("영업대표") == rep and d.get("결과") in ("계약완료", "Deal Lost")]
-    n = len(rep_deals)
+    if _rep_idx is not None:
+        entry = _rep_idx.get(rep, {"total": 0, "won": 0})
+        n = entry["total"]
+        won = entry["won"]
+    else:
+        rep_deals = [d for d in (closed_deals or [])
+                     if d.get("영업대표") == rep and d.get("결과") in ("계약완료", "Deal Lost")]
+        n = len(rep_deals)
+        won = sum(1 for d in rep_deals if d.get("결과") == "계약완료")
 
     if n < 3:
         opp["_rep_win_rate"] = None
         opp["_rep_deal_count"] = n
-        return 6.0  # 이력 부족 시 중간값
+        return 6.0
 
-    won = sum(1 for d in rep_deals if d.get("결과") == "계약완료")
     win_rate = won / n
     opp["_rep_win_rate"] = round(win_rate * 100)
     opp["_rep_deal_count"] = n
 
-    # 승률 기본 점수 (0~12)
-    if win_rate < 0.20:       base = 2.0
-    elif win_rate < 0.30:     base = 4.0
-    elif win_rate < 0.40:     base = 6.0
-    elif win_rate < 0.50:     base = 8.0
-    elif win_rate < 0.60:     base = 10.0
-    elif win_rate < 0.75:     base = 11.0
-    else:                     base = 12.0
+    if win_rate < 0.20:   base = 2.0
+    elif win_rate < 0.30: base = 4.0
+    elif win_rate < 0.40: base = 6.0
+    elif win_rate < 0.50: base = 8.0
+    elif win_rate < 0.60: base = 10.0
+    elif win_rate < 0.75: base = 11.0
+    else:                 base = 12.0
 
-    # 신뢰도 보정 (0~3)
-    if n <= 2:       reliability = 0.0
-    elif n <= 5:     reliability = 1.0
-    elif n <= 10:    reliability = 2.0
-    else:            reliability = 3.0
+    if n <= 2:    reliability = 0.0
+    elif n <= 5:  reliability = 1.0
+    elif n <= 10: reliability = 2.0
+    else:         reliability = 3.0
 
     return round(min(base + reliability, 15.0), 2)
 
-def calc_deal_score(opp: dict, closed_deals: list) -> dict:
+def calc_deal_score(opp: dict, closed_deals: list, _rep_idx: dict = None) -> dict:
     weights = load_meddpicc_weights()
     sf = calc_strategic_fit(opp)
     dq = calc_deal_quality(opp.get("meddpicc", {}), weights)
     ac = calc_activity(opp)
     ch = calc_customer_history(opp, closed_deals)
-    rr = calc_rep_rate(opp, closed_deals)
+    rr = calc_rep_rate(opp, closed_deals, _rep_idx)
     total = round(sf + dq + ac + ch + rr, 1)
     return {
         "strategic_fit": sf,
@@ -863,13 +962,31 @@ async def get_opportunities(
     key_account: Optional[bool] = None,
 ):
     # ── 캐시 확인 ──
+    _t0 = time()
     cache_key = f"opps_{dept or 'all'}_{team or 'all'}_{rep or 'all'}_{stage or 'all'}_{biz_type or 'all'}_{key_account or 'all'}"
     cached = cache_get(cache_key)
     if cached:
+        print(f"[timing] GET /api/opportunities cache HIT {(time()-_t0)*1000:.0f}ms key={cache_key}")
         return cached
+    print(f"[timing] GET /api/opportunities cache MISS key={cache_key}")
 
-    opps = load("opportunities")
-    closed_deals = load("closed_deals")
+    # 메모리 캐시 우선 사용 — 디스크 I/O + 스코어 재계산 생략
+    all_cached = cache_get("opps_all_all_all_all_all_all")
+    if all_cached:
+        opps = list(all_cached)
+    else:
+        opps = load("opportunities")
+        closed_deals = cache_get("closed_deals_all") or load("closed_deals")
+        _rep_idx = _build_closed_index(closed_deals)
+        for o in opps:
+            o["score"] = calc_deal_score(o, closed_deals, _rep_idx)
+            normal = STAGE_NORMAL_DAYS.get(o.get("stage", "Lead"), 30)
+            days   = o.get("stage_days", 0)
+            o["stage_alert"] = (
+                "danger"  if normal > 0 and days > normal * 2   else
+                "warning" if normal > 0 and days > normal * 1.5 else
+                "normal"
+            )
 
     if dept:        opps = [o for o in opps if o.get("사업부문") == dept]
     if team:        opps = [o for o in opps if o.get("영업팀") == team]
@@ -879,18 +996,9 @@ async def get_opportunities(
     if key_account is not None:
         opps = [o for o in opps if o.get("중점고객여부") == key_account]
 
-    for o in opps:
-        o["score"] = calc_deal_score(o, closed_deals)
-        # Stage 초과 여부
-        normal = STAGE_NORMAL_DAYS.get(o.get("stage", "Lead"), 30)
-        days   = o.get("stage_days", 0)
-        o["stage_alert"] = (
-            "danger"  if normal > 0 and days > normal * 2   else
-            "warning" if normal > 0 and days > normal * 1.5 else
-            "normal"
-        )
     # ── 캐시 저장 ──
     cache_set(cache_key, opps)
+    print(f"[timing] GET /api/opportunities DONE {(time()-_t0)*1000:.0f}ms ({len(opps)}건)")
     return opps
 
 @app.get("/api/opportunities/{opp_id}")
@@ -900,12 +1008,21 @@ async def get_opportunity(opp_id: str):
     if cached:
         return cached
 
-    opps         = load("opportunities")
-    closed_deals = load("closed_deals")
-    opp          = next((o for o in opps if o["id"] == opp_id), None)
+    # 전체 opps 캐시에서 먼저 찾기 — 파일 읽기 생략
+    all_cached = cache_get("opps_all_all_all_all_all_all")
+    if all_cached:
+        opp = next((o for o in all_cached if o["id"] == opp_id), None)
+        if opp:
+            cache_set(cache_key, opp)
+            return opp
+    # fallback: 파일에서 로드
+    opps = load("opportunities")
+    closed_deals = cache_get("closed_deals_all") or load("closed_deals")
+    _rep_idx = _build_closed_index(closed_deals)
+    opp = next((o for o in opps if o["id"] == opp_id), None)
     if not opp:
         raise HTTPException(404, "Not found")
-    opp["score"] = calc_deal_score(opp, closed_deals)
+    opp["score"] = calc_deal_score(opp, closed_deals, _rep_idx)
     cache_set(cache_key, opp)
     return opp
 
@@ -915,13 +1032,21 @@ async def get_pipeline(
     rep: Optional[str] = None,
 ):
     # ── 캐시 확인 (A+B 최적화) ──
+    _t0 = time()
     cache_key = f"pipeline_{dept or 'all'}_{rep or 'all'}"
     cached = cache_get(cache_key)
     if cached:
+        print(f"[timing] GET /api/pipeline cache HIT {(time()-_t0)*1000:.0f}ms key={cache_key}")
         return cached
+    print(f"[timing] GET /api/pipeline cache MISS key={cache_key}")
 
-    opps         = load("opportunities")
-    closed_deals = load("closed_deals")
+    all_cached = cache_get("opps_all_all_all_all_all_all")
+    if all_cached:
+        opps = list(all_cached)
+        closed_deals = None  # 스코어 이미 계산됨
+    else:
+        opps = load("opportunities")
+        closed_deals = cache_get("closed_deals_all") or load("closed_deals")
     if dept: opps = [o for o in opps if o.get("사업부문") == dept]
     if rep:  opps = [o for o in opps if o.get("영업대표") == rep]
 
@@ -940,12 +1065,16 @@ async def get_pipeline(
             "weighted": round(sum(o["수주목표액"] * o.get("수주확도",0)/100 for o in s_opps), 1),
         })
 
-    # 팀원별 현황 — 캐시된 score 재활용 (N+1 쿼리 방지)
+    # 팀원별 현황 — opp["score"] 또는 개별 캐시 우선 사용
     def _get_score(o):
+        if o.get("score", {}).get("total"):
+            return o["score"]["total"]
         cached_opp = cache_get(f"opp_{o['id']}")
         if cached_opp and cached_opp.get("score"):
             return cached_opp["score"]["total"]
-        return o.get("score", {}).get("total") or calc_deal_score(o, closed_deals)["total"]
+        if closed_deals is not None:
+            return calc_deal_score(o, closed_deals)["total"]
+        return 0
 
     rep_summary = []
     all_reps = list(set(o.get("영업대표","") for o in opps))
@@ -969,6 +1098,7 @@ async def get_pipeline(
 
     # ── 캐시 저장 (5분) ──
     cache_set(cache_key, result)
+    print(f"[timing] GET /api/pipeline DONE {(time()-_t0)*1000:.0f}ms")
 
     return result
 
@@ -1397,22 +1527,31 @@ class BriefingRequest(BaseModel):
 
 @app.post("/api/briefing")
 async def get_briefing(req: BriefingRequest):
+    _t0 = time()
     # ── 캐시 확인 (쿼리가 없을 때만) ──
     cache_key = f"briefing_{req.role}_{req.dept or 'all'}_{req.rep_name or 'all'}"
     if not req.query:  # 사용자 질의가 없을 때만 캐시
         cached = cache_get(cache_key)
         if cached:
+            print(f"[timing] POST /api/briefing cache HIT {(time()-_t0)*1000:.0f}ms key={cache_key}")
             return cached
+    print(f"[timing] POST /api/briefing cache MISS key={cache_key}")
 
-    opps = load("opportunities")
+    # 메모리 캐시 우선 — 디스크 I/O 생략
+    all_cached = cache_get("opps_all_all_all_all_all_all")
+    if all_cached:
+        opps = list(all_cached)
+    else:
+        opps = load("opportunities")
+        closed_deals = load("closed_deals")
+        for o in opps:
+            o["score"] = calc_deal_score(o, closed_deals)
     if req.dept:     opps = [o for o in opps if o.get("사업부문") == req.dept]
     if req.rep_name: opps = [o for o in opps if o.get("영업대표") == req.rep_name]
 
-    # 캐시된 점수 재활용 — 재계산 생략
-    closed_deals = load("closed_deals")
     for o in opps:
-        cached_opp = cache_get(f"opp_{o['id']}")
-        o["_score"] = (cached_opp or {}).get("score") or calc_deal_score(o, closed_deals)
+        _sc = o.get("score") or (cache_get(f"opp_{o['id']}") or {}).get("score") or {"total": 0}
+        o["_score"] = _sc
 
     # 위험 딜 선별
     risky = sorted(
@@ -1477,6 +1616,7 @@ async def get_briefing(req: BriefingRequest):
 
 질문: {user_q}"""
 
+    _t_ai = time()
     try:
         resp = _client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -1485,6 +1625,7 @@ async def get_briefing(req: BriefingRequest):
             messages=[{"role": "user", "content": user_p}],
         )
         briefing_text = resp.content[0].text
+        print(f"[timing] briefing AI call {(time()-_t_ai)*1000:.0f}ms")
     except Exception:
         briefing_text = _fallback_briefing(opps, gap, risky, urgent)
 
@@ -1499,6 +1640,7 @@ async def get_briefing(req: BriefingRequest):
     if not req.query:
         cache_set(cache_key, result)
 
+    print(f"[timing] POST /api/briefing DONE {(time()-_t0)*1000:.0f}ms")
     return result
 
 # ── 관리자 API ──
@@ -1657,7 +1799,10 @@ class CoachingNoteRequest(BaseModel):
 
 @app.post("/api/coaching-notes")
 async def save_coaching_note(req: CoachingNoteRequest):
-    opps = load("opportunities")
+    # 캐시된 전체 opps 사용 — 디스크 읽기 생략
+    all_cached = cache_get("opps_all_all_all_all_all_all")
+    opps = list(all_cached) if all_cached else load("opportunities")
+
     idx = next((i for i,o in enumerate(opps) if o["id"] == req.opp_id), None)
     if idx is None:
         raise HTTPException(404, "Opportunity not found")
@@ -1676,6 +1821,9 @@ async def save_coaching_note(req: CoachingNoteRequest):
     opp["최근_업데이트일"] = date.today().strftime("%Y-%m-%d")
 
     save("opportunities", opps)
+    # 캐시 갱신
+    cache_set("opps_all_all_all_all_all_all", opps)
+    cache_set(f"opp_{opp['id']}", opp)
     return {"success": True, "note": note}
 
 @app.get("/api/coaching-notes/{opp_id}")

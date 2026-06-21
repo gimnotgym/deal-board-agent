@@ -2262,6 +2262,16 @@ async function doUpdate(bubbleId, btnId) {
       S.pendingFile = null;
       loadActivityLog(S.currentOpp.id);
 
+      // 데모 딜: 업데이트 후 고정 추가 질문
+      if (S.currentOpp.id === 'OPP-2026-125') {
+        const m = S.currentOpp.meddpicc || {};
+        let demoQ = null;
+        if (m.DP === 2 && (m.C === 2 || m.C === 1)) {
+          demoQ = "CTO가 '내부 설득이 관건'이라고 하셨는데 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?";
+        }
+        if (demoQ) setTimeout(() => { addMsg('agent', demoQ); S.conversation.push({role:'agent', text: demoQ}); }, 700);
+      }
+
       // 채팅창 맨 아래로 스크롤
       const msgs = document.getElementById('chatMessages');
       if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 100);

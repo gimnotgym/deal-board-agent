@@ -758,6 +758,12 @@ nav {
   <div class="footer-note">AX Project · SKAX김효진 — MVP Demo · localhost:8000</div>
 </div>
 
+<script>
+if (location.hash) {
+  const el = document.querySelector(location.hash);
+  if (el) setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+}
+</script>
 </body>
 </html>
 

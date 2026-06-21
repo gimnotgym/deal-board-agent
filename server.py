@@ -1994,6 +1994,16 @@ async def meddpicc_analysis():
     cache_set("admin_meddpicc_analysis", result)
     return result
 
+@app.post("/api/admin/reset")
+async def admin_reset():
+    seed_dir = BASE / "data_seed"
+    if not seed_dir.exists():
+        raise HTTPException(500, "data_seed 폴더를 찾을 수 없습니다.")
+    import shutil
+    for seed_file in seed_dir.glob("*.json"):
+        shutil.copy2(seed_file, DATA / seed_file.name)
+    return {"status": "ok", "message": "데이터가 초기화됐습니다."}
+
 @app.get("/health")
 async def health():
     return {

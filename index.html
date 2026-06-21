@@ -436,7 +436,7 @@ function ensurePdfjs(cb) {
     <button class="role-tab" onclick="switchRole('admin')">관리자</button>
   </nav>
   <div class="header-right">
-    <div class="user-badge" id="userBadge"><strong>김효진</strong> · 금융2팀</div>
+    <div class="user-badge" id="userBadge" style="cursor:pointer" onclick="resetDemoData()"><strong>김효진</strong> · 금융2팀</div>
   </div>
 </header>
 
@@ -1218,6 +1218,19 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── 데모 데이터 초기화 ──
+async function resetDemoData() {
+  if (!confirm('데모 데이터를 초기 상태로 초기화할까요?')) return;
+  try {
+    const res = await fetch('/api/admin/reset', {method: 'POST'});
+    if (!res.ok) throw new Error();
+    showToast('✓ 데이터가 초기화되었습니다. 새로고침합니다…');
+    setTimeout(() => location.reload(), 1500);
+  } catch {
+    showToast('초기화 실패. 다시 시도해주세요.');
+  }
 }
 
 // ── Auto-resize textarea ──

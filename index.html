@@ -2581,7 +2581,11 @@ function _winPlanPoint(o) {
 function elaborateAction(kind) {
   const b = S.leaderBriefing || {};
   const risky = b.risky || [];
-  const urgent = b.urgent || [];
+  // urgent는 briefing[:3] 대신 leaderOpps 전체에서 직접 필터 (누락 방지)
+  const urgent = (S.leaderOpps || [])
+    .filter(o => { const d = daysTo(o.입찰일); return d !== null && d >= 0 && d <= 30; })
+    .sort((a, b) => daysTo(a.입찰일) - daysTo(b.입찰일))
+    .map(o => ({ ...o, _days_to_bid: daysTo(o.입찰일) }));
   let html = '';
 
   if (kind === 'coaching') {

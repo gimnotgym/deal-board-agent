@@ -169,7 +169,7 @@ async def _do_warm_cache():
                 cache_set(f"pipeline_{_dept}_all", _build_pipeline(_d_opps))
                 _d_gap = calc_pipeline_gap(_d_opps)
                 _d_risky = sorted([o for o in _d_opps if o["score"]["total"] < 40], key=lambda x: x["score"]["total"])[:5]
-                _d_urgent = [o for o in _d_opps if o.get("_days_to_bid") is not None][:3]
+                _d_urgent = sorted([o for o in _d_opps if o.get("_days_to_bid") is not None], key=lambda x: x.get("_days_to_bid", 99))[:5]
                 _d_pre = {
                     "briefing": _fallback_briefing(_d_opps, _d_gap, _d_risky, _d_urgent),
                     "risky_deals": _d_risky[:3], "urgent_deals": _d_urgent[:3], "gap": _d_gap,
@@ -1159,6 +1159,7 @@ async def chat(req: ChatRequest):
         resp = _client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
+            temperature=0,
             system=sys_prompt,
             messages=messages,
         )
@@ -1192,6 +1193,7 @@ async def evaluate_meddpicc(req: EvalRequest):
         resp = _client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1500,
+            temperature=0,
             system=sys_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )

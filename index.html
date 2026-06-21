@@ -2028,13 +2028,22 @@ async function loadActivityLog(oppId) {
       const icon = it.source === 'file' ? '📎' : '💬';
       const title = escHtml(it.title || (it.source === 'file' ? (it.filename || '첨부 파일') : '대화 업데이트'));
       const rawSummary = it.summary || it.preview || '';
-      const summary = rawSummary.split('\n').map(l => escHtml(l.trim())).filter(Boolean)
-        .map(l => `<div style="margin-bottom:2px">${l}</div>`).join('');
+      // 내용요약 줄: '-'로 시작하고 '[스코어 변경]' 아닌 줄
+      const contentLines = rawSummary.split('\n')
+        .map(l => l.trim()).filter(l => l && !l.startsWith('[스코어 변경]'));
+      const summaryHtml = contentLines.length
+        ? `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:8px 0 4px">📋 내용 요약</div>
+           <div class="activity-item-summary">${contentLines.map(l => escHtml(l)).join('<br>')}</div>`
+        : '';
       const chips = (it.changes || []).map(c => {
         const dir = c.to > c.from ? '▲' : '▼';
         const col = c.to > c.from ? '#6B4FBB' : '#E57373';
         return `<span class="activity-chip" style="color:${col};border-color:${col}20">${dir} ${escHtml(c.name)} ${c.from}→${c.to}</span>`;
       }).join('');
+      const chipsHtml = chips
+        ? `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:8px 0 4px">📊 스코어 변경</div>
+           <div class="activity-item-chips">${chips}</div>`
+        : '';
       const timeStr = fmtLogTime(it.timestamp);
       const bodyId = `act-body-${idx}`;
       const caretId = `act-caret-${idx}`;
@@ -2055,9 +2064,8 @@ async function loadActivityLog(oppId) {
           <span class="activity-item-time">${timeStr}</span>
           <span class="activity-item-caret" id="${caretId}">${isFirst ? '▼' : '▶'}</span>
         </div>
-        <div class="activity-item-body" id="${bodyId}" style="${isFirst ? '' : 'display:none'}">
-          ${summary ? `<div class="activity-item-summary">${summary}</div>` : ''}
-          ${chips ? `<div class="activity-item-chips">${chips}</div>` : ''}
+        <div class="activity-item-body${isFirst ? ' open' : ''}" id="${bodyId}">
+          ${summaryHtml}${chipsHtml}
         </div>
       </div>`;
     }).join('');
@@ -2494,8 +2502,9 @@ function renderLeaderBriefingCard(res, showActions, panelId) {
       </table>
     </div>` : '';
 
-  // 입찰 임박
-  const bidRows = urgent.map(o => {
+  // 입찰 임박 (최대 3건)
+  const urgentTop = urgent.slice(0, 3);
+  const bidRows = urgentTop.map(o => {
     const d = o._days_to_bid;
     const cls = (d != null && d <= 4) ? 'urgent' : 'soon';
     const dtxt = (d != null) ? `D-${d}` : 'D-?';

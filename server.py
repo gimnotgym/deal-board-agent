@@ -81,7 +81,7 @@ _DEMO_FIXTURE_2 = {  # 문서2: 통화요약_0609
         {"item": "DP", "from": 0, "to": 2, "direction": "up", "evidence": "CTO→CFO 협의→6월 30일 경영위원회 보고로 최종 승인 예정", "reason": "의사결정 승인 경로 직접 확인"},
         {"item": "C",  "from": 1, "to": 2, "direction": "up", "evidence": "이번 사업 최종 결정권자: 이준혁 전무", "reason": "실질 의사결정권자 직접 확인"},
     ],
-    "ambiguities": [{"item": "I", "trigger": "내부 설득이 관건", "is_stage_required": False, "question": "CTO가 '내부 설득이 관건'이라고 하셨는데 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"}],
+    "ambiguities": [{"item": "I", "trigger": "내부 설득이 관건", "is_stage_required": True, "question": "CTO가 '내부 설득이 관건'이라고 하셨는데 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"}],
     "preview_text": "이준혁 CTO와의 직접 통화로 의사결정 구조가 확인됐습니다. CTO 검토 → CFO 협의 → 6월 30일 경영위원회 보고로 이어지는 승인 경로가 확정됐으며, CTO가 실제 업무 프로세스 기반의 라이브 데모를 직접 요청했습니다.",
     "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": "6월 30일 PT 확정 회신 및 라이브 데모 시나리오 구성", "recommended_stage": None,
 }

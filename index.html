@@ -2244,12 +2244,17 @@ async function doUpdate(bubbleId, btnId) {
       document.getElementById('btnUpdate').style.display = 'none';
       addMsg('agent', `반영했습니다. Deal Score ${(oldScore?.total||0).toFixed(0)}점 → ${(res.score?.total||0).toFixed(0)}점${stageMsg}.`);
 
-      // 목록 행 점수 즉시 업데이트
+      // 목록 행 점수 즉시 업데이트 (DOM + 메모리 배열 동기화)
       const row = document.getElementById(`row-${S.currentOpp.id}`);
       if (row) {
         const scoreCell = row.querySelector('.score-num');
         if (scoreCell) scoreCell.textContent = (res.score?.total||0).toFixed(0);
       }
+      // S.opps / S.leaderOpps / S.execOpps 배열의 점수도 동기화
+      [S.opps, S.leaderOpps, S.execOpps].forEach(arr => {
+        const o = (arr||[]).find(x => x.id === S.currentOpp.id);
+        if (o) { o.score = res.score; o.meddpicc = S.evalResult?.scores || o.meddpicc; }
+      });
       // prefetch 캐시 무효화 (최신 점수 반영)
       delete _prefetchCache[S.currentOpp.id];
 

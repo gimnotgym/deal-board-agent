@@ -1595,7 +1595,7 @@ async def get_briefing(req: BriefingRequest):
     ])
     urgent_summary = "\n".join([
         f"- {o['사업기회명']} (입찰 D-{o.get('_days_to_bid','?')}, {o['영업대표']})"
-        for o in urgent[:3]
+        for o in urgent[:5]
     ])
 
     role_ctx = (
@@ -1623,6 +1623,7 @@ async def get_briefing(req: BriefingRequest):
         resp = _client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=400,
+            temperature=0,
             system=sys_p,
             messages=[{"role": "user", "content": user_p}],
         )
@@ -1634,7 +1635,7 @@ async def get_briefing(req: BriefingRequest):
     result = {
         "briefing": briefing_text,
         "risky_deals": risky[:3],
-        "urgent_deals": urgent[:3],
+        "urgent_deals": urgent[:5],
         "gap": gap,
     }
 

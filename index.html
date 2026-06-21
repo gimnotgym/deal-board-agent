@@ -1801,7 +1801,7 @@ function renderScorePanel(score, oldScore) {
   // 5-Factor 값 표시
   ['sfVal','dqVal','acVal','chVal','rrVal'].forEach((id, i) => {
     const keys = ['strategic_fit','deal_quality','activity','cust_history','rep_rate'];
-    const el = g(id); if (el) el.textContent = (s[keys[i]] ?? 0).toFixed(1);
+    const el = g(id); if (el) el.textContent = Math.round(s[keys[i]] ?? 0);
   });
 
   // SF 상세 (중점사업/중점고객/AX)

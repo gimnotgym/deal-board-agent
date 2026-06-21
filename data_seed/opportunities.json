@@ -6017,7 +6017,15 @@
         "date": "2026-05-17",
         "type": "stage_change"
       }
-    ]
+    ],
+    "score": {
+      "strategic_fit": 20.0,
+      "deal_quality": 9.0,
+      "activity": 3.0,
+      "cust_history": 15.0,
+      "rep_rate": 13.0,
+      "total": 60.0
+    }
   },
   {
     "id": "OPP-2026-126",

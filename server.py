@@ -82,7 +82,7 @@ _DEMO_FIXTURE_2 = {  # 문서2: 통화요약_0609
         {"item": "C",  "from": 1, "to": 2, "direction": "up", "evidence": "이번 사업 최종 결정권자: 이준혁 전무", "reason": "실질 의사결정권자 직접 확인"},
     ],
     "ambiguities": [{"item": "I", "trigger": "내부 설득이 관건", "is_stage_required": True, "question": "CTO가 '내부 설득이 관건'이라고 하셨는데 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"}],
-    "preview_text": "이준혁 CTO와의 직접 통화로 의사결정 구조가 확인됐습니다. CTO 검토 → CFO 협의 → 6월 30일 경영위원회 보고로 이어지는 승인 경로가 확정됐으며, CTO가 실제 업무 프로세스 기반의 라이브 데모를 직접 요청했습니다.",
+    "preview_text": "이준혁 CTO와의 직접 통화로 의사결정 구조가 확인됐습니다. CTO 검토 → CFO 협의 → 6월 30일 경영위원회 보고로 이어지는 승인 경로가 확정됐으며, CTO가 실제 업무 프로세스 기반의 라이브 데모를 직접 요청했습니다. 반영 시 딜품질(DQ) 향상으로 Deal Score +4점 예상.",
     "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": "6월 30일 PT 확정 회신 및 라이브 데모 시나리오 구성", "recommended_stage": None,
 }
 
@@ -92,9 +92,15 @@ _DEMO_FIXTURE_3 = {  # Step 3: 최 차장 답변
         {"item": "C", "from": 2, "to": 3, "direction": "up", "evidence": "최 차장, 차세대 시스템 구축 시 당사 시스템에 매우 만족", "reason": "여신심사팀 차장을 복수 챔피언으로 확인"},
     ],
     "ambiguities": [],
-    "preview_text": "여신심사팀 최현우 차장이 기존 당사 시스템에 만족도가 높은 것으로 확인됐습니다. CTO와 함께 복수 챔피언 구조가 형성됐으며, PT에서 차세대 구축 경험을 강조하는 프레이밍이 효과적일 것으로 판단됩니다.",
+    "preview_text": "여신심사팀 최현우 차장이 기존 당사 시스템에 만족도가 높은 것으로 확인됐습니다. CTO와 함께 복수 챔피언 구조가 형성됐으며, PT에서 차세대 구축 경험을 강조하는 프레이밍이 효과적일 것으로 판단됩니다. 반영 시 Deal Score +1점 예상.",
     "champion_type": "Type1 실무추진자", "champion_risk": None, "next_action": None, "recommended_stage": None,
 }
+
+# 데모 고정 점수 (SF=20, CH=15, RR=13 고정 / DQ만 증가)
+_DEMO_SCORE_SEED = {"strategic_fit": 20.0, "deal_quality":  9.0, "activity": 3.0, "cust_history": 15.0, "rep_rate": 13.0, "total": 60.0}
+_DEMO_SCORE_1    = {"strategic_fit": 20.0, "deal_quality": 15.0, "activity": 3.0, "cust_history": 15.0, "rep_rate": 13.0, "total": 66.0}
+_DEMO_SCORE_2    = {"strategic_fit": 20.0, "deal_quality": 19.0, "activity": 3.0, "cust_history": 15.0, "rep_rate": 13.0, "total": 70.0}
+_DEMO_SCORE_3    = {"strategic_fit": 20.0, "deal_quality": 20.0, "activity": 3.0, "cust_history": 15.0, "rep_rate": 13.0, "total": 71.0}
 
 _DEMO_CHAT_2 = "CTO 직접 통화로 의사결정 구조가 명확해졌네요. 6월 30일 경영위원회 전에 CFO 협의까지 완료해야 하니 PT 일정이 실질적인 마감입니다.\n\n한 가지 여쭤볼게요 — 회의록에서 여신심사팀 최현우 차장이 평가위원에 포함됐잖아요. 이 분이 우리 솔루션에 우호적인지, PT에서 어떤 포인트를 강조해야 할지 감이 오시나요?"
 
@@ -1447,13 +1453,33 @@ async def update_meddpicc(req: UpdateRequest):
     activity.append(activity_entry)
     save("activity_log", activity)
 
-    # 활동성 점수 계산에 쓰이는 embedded activity_log도 동기화
+    # 활동성 점수 계산에 쓰이는 embedded activity_log 동기화
     today_str = datetime.now().strftime("%Y-%m-%d")
     if "activity_log" not in opps[idx] or not isinstance(opps[idx]["activity_log"], list):
         opps[idx]["activity_log"] = []
     opps[idx]["activity_log"].append({"date": today_str, "type": "meddpicc_update"})
     save("opportunities", opps)
-    # 업데이트된 딜 즉시 재캐싱 (파이프라인 캐시만 무효화)
+
+    # 데모 딜: 고정 점수 반환 (합산 오류 방지)
+    if _is_demo_opp(req.opp_id):
+        nm = req.scores
+        if nm.get("C") == 3:
+            fixed = _DEMO_SCORE_3
+        elif nm.get("DP") == 2 and nm.get("C") == 2:
+            fixed = _DEMO_SCORE_2
+        elif nm.get("M") == 3 and nm.get("E") == 3 and nm.get("DC") == 2:
+            fixed = _DEMO_SCORE_1
+        else:
+            fixed = None
+        if fixed:
+            opps[idx]["score"] = fixed
+            save("opportunities", opps)
+            cache_set(f"opp_{req.opp_id}", opps[idx])
+            for k in [k for k in _cache if k.startswith("pipeline_") or k.startswith("opps_")]:
+                _cache.pop(k, None)
+            return {"success": True, "score": fixed}
+
+    # 일반 딜: 실시간 계산
     closed_deals = load("closed_deals")
     opps[idx]["score"] = calc_deal_score(opps[idx], closed_deals)
     cache_set(f"opp_{req.opp_id}", opps[idx])

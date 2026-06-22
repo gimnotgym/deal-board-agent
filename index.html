@@ -2536,7 +2536,7 @@ function renderLeaderBriefingCard(res, showActions, panelId) {
   // 입찰 임박 (최대 3건)
   const urgentTop = urgent.slice(0, 3);
   const bidRows = urgentTop.map(o => {
-    const d = o._days_to_bid;
+    const d = daysTo(o.입찰일) ?? o._days_to_bid;
     const cls = (d != null && d <= 4) ? 'urgent' : 'soon';
     const dtxt = (d != null) ? `D-${d}` : 'D-?';
     return `<div class="lb-bid-row"><span class="lb-dday ${cls}">${dtxt}</span>

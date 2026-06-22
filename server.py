@@ -6,9 +6,14 @@ SK그룹 AX 과제 MVP
 import json
 import os
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
+
+# ── KST(한국 표준시) 기준 오늘 날짜 — Render는 UTC라 한국 오전엔 전날이 됨 ──
+_KST = timezone(timedelta(hours=9))
+def kst_today() -> date:
+    return datetime.now(_KST).date()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -161,7 +166,7 @@ async def _do_warm_cache():
         # 사업부문장/리더 브리핑 캐시 사전 계산 (첫 방문 시 즉시 응답)
         try:
             import datetime as _dt
-            _today = _dt.date.today()
+            _today = kst_today()
             _gap = calc_pipeline_gap(opps)
             _risky = sorted(
                 [o for o in opps if o["score"]["total"] < 40 or o.get("stage_alert") == "danger"],
@@ -628,7 +633,7 @@ def build_agent_chat_prompt(opp: dict, conversation: list, new_message: str) -> 
     asked = sum(1 for t in conversation if t.get("role") == "agent" and "?" in t.get("text", ""))
 
     from datetime import date as _date
-    today_str = _date.today().strftime("%Y년 %m월 %d일")
+    today_str = kst_today().strftime("%Y년 %m월 %d일")
     sys_prompt = f"""당신은 SK그룹 영업팀의 딜 코치입니다.
 오늘 날짜: {today_str}
 영업대표와 자연스러운 대화를 통해 사업기회 정보를 파악하고, 딜 진행 상황을 함께 점검합니다.
@@ -683,7 +688,7 @@ def build_report_chat_prompt(opp: dict, new_message: str, viewer_role: str) -> t
     viewer = "사업부문장" if viewer_role == "exec" else "영업리더"
 
     from datetime import date as _date
-    today_str = _date.today().strftime("%Y년 %m월 %d일")
+    today_str = kst_today().strftime("%Y년 %m월 %d일")
     sys_prompt = f"""당신은 SK그룹 영업 AI 어시스턴트입니다.
 오늘 날짜: {today_str}
 {viewer}이 특정 딜에 대해 물으면, 지금까지 진행된 내용을 **사실 위주로 요약 보고**합니다.
@@ -1552,7 +1557,7 @@ class MeetingChatRequest(BaseModel):
 @app.post("/api/meeting/chat")
 async def meeting_chat(req: MeetingChatRequest):
     from datetime import date as _date
-    today_str = _date.today().strftime("%Y년 %m월 %d일")
+    today_str = kst_today().strftime("%Y년 %m월 %d일")
     system_prompt = (
         f"오늘 날짜: {today_str}\n"
         "아래 회의록 내용만 근거로 사용자 질문에 한국어로 답하세요.\n"
@@ -1627,12 +1632,12 @@ class BriefingRequest(BaseModel):
 async def get_briefing(req: BriefingRequest):
     _t0 = time()
     # ── 캐시 확인 (쿼리가 없을 때만) ──
-    cache_key = f"briefing_{req.role}_{req.dept or 'all'}_{req.rep_name or 'all'}_{date.today().isoformat()}"
+    cache_key = f"briefing_{req.role}_{req.dept or 'all'}_{req.rep_name or 'all'}_{kst_today().isoformat()}"
     if not req.query:  # 사용자 질의가 없을 때만 캐시
         cached = cache_get(cache_key)
         if cached:
             # 캐시 히트라도 urgent 딜의 _days_to_bid는 오늘 날짜로 재계산
-            _today_recalc = date.today()
+            _today_recalc = kst_today()
             for ud in (cached.get("urgent_deals") or []):
                 try:
                     ud["_days_to_bid"] = (date.fromisoformat(ud["입찰일"]) - _today_recalc).days
@@ -1665,7 +1670,7 @@ async def get_briefing(req: BriefingRequest):
     )[:5]
 
     # 입찰 임박 (30일 이내)
-    today = date.today()
+    today = kst_today()
     urgent = []
     for o in opps:
         bid = o.get("입찰일", "")
